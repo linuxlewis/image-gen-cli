@@ -12,6 +12,7 @@ agent-first repo conventions so the codebase can scale without losing structure.
 | What | Where |
 |------|-------|
 | Code organization and dependency rules | [ARCHITECTURE.md](./ARCHITECTURE.md) |
+| Model registry rules | [docs/model-registry-principles.md](./docs/model-registry-principles.md) |
 | Documentation catalog | [docs/catalog.md](./docs/catalog.md) |
 | Testing guidance | [docs/testing.md](./docs/testing.md) |
 | Quality notes and gaps | [docs/quality.md](./docs/quality.md) |
@@ -37,6 +38,8 @@ pnpm · TypeScript · tsx · tsup · Vitest · Biome
 1. Read this file.
 2. Check `plans/active/` for ongoing work.
 3. Read [ARCHITECTURE.md](./ARCHITECTURE.md) before introducing new modules or directories.
+4. Read [docs/model-registry-principles.md](./docs/model-registry-principles.md) before changing model,
+   registry, alias, or provider-routing logic.
 
 ## When You're Done
 

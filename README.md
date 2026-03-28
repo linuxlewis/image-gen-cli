@@ -17,6 +17,7 @@ pnpm build
 
 - `AGENTS.md`: first stop for agents working in the repo
 - `ARCHITECTURE.md`: code organization and dependency rules
+- `docs/model-registry-principles.md`: source of truth for canonical model IDs and provider routes
 - `docs/`: documentation, quality notes, and design records
 - `plans/`: active and completed work plans
 - `src/`: CLI source code
