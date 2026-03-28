@@ -23,6 +23,38 @@ describe("http client", () => {
     });
   });
 
+  it("passes byte bodies through unchanged without forcing JSON headers", async () => {
+    const body = Buffer.from([1, 2, 3, 4]);
+
+    const client = createHttpClient({
+      fetchFn: async (_input, init) =>
+        new Response(
+          JSON.stringify({
+            bodyIdentityPreserved: init?.body === body,
+            contentType: new Headers(init?.headers).get("content-type"),
+          }),
+          {
+            headers: { "content-type": "application/json" },
+            status: 200,
+          },
+        ),
+    });
+
+    await expect(
+      client.requestJson<{ bodyIdentityPreserved: boolean; contentType: string | null }>(
+        "https://example.com/upload",
+        {
+          body,
+          headers: { "x-test": "bytes" },
+          method: "POST",
+        },
+      ),
+    ).resolves.toEqual({
+      bodyIdentityPreserved: true,
+      contentType: null,
+    });
+  });
+
   it("raises an HttpError for non-ok responses", async () => {
     const client = createHttpClient({
       fetchFn: async () =>

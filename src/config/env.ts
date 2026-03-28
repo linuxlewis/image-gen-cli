@@ -1,5 +1,6 @@
-import { ConfigError } from "../core/errors.js";
 import type { ProviderId } from "../core/types.js";
+
+import { ConfigError } from "../core/errors.js";
 
 export type Environment = Record<string, string | undefined>;
 
@@ -16,23 +17,13 @@ export function getProviderApiKeyEnvVar(provider: ProviderId): string {
 
 export function readEnvVar(env: Environment, key: string): string | undefined {
   const value = env[key]?.trim();
-  return value ? value : undefined;
-}
-
-export function requireEnvVar(env: Environment, key: string): string {
-  const value = readEnvVar(env, key);
-
-  if (value) {
-    return value;
-  }
-
-  throw new ConfigError("CONFIG_ENV_MISSING", `Missing required environment variable ${key}.`);
+  return value || undefined;
 }
 
 export function validateProviderApiKey(provider: ProviderId, apiKey: string): string {
   const normalizedApiKey = apiKey.trim();
 
-  if (normalizedApiKey.length > 0) {
+  if (normalizedApiKey) {
     return normalizedApiKey;
   }
 

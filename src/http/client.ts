@@ -24,52 +24,6 @@ export type CreateHttpClientOptions = {
   fetchFn?: FetchLike;
 };
 
-async function readErrorBody(response: Response): Promise<string | undefined> {
-  try {
-    const bodyText = await response.text();
-    const normalizedBody = bodyText.trim();
-
-    return normalizedBody.length > 0 ? normalizedBody : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function isJsonBody(value: HttpJsonRequestOptions["body"]): value is JsonBody {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    !(value instanceof ArrayBuffer) &&
-    !(value instanceof Blob) &&
-    !(value instanceof FormData) &&
-    !(value instanceof URLSearchParams) &&
-    !(value instanceof ReadableStream)
-  );
-}
-
-function normalizeJsonRequest(init: HttpJsonRequestOptions = {}): HttpRequestOptions {
-  const { body, ...rest } = init;
-
-  if (!isJsonBody(body)) {
-    return {
-      ...rest,
-      ...(body === undefined ? {} : { body }),
-    };
-  }
-
-  const headers = new Headers(init.headers);
-
-  if (!headers.has("content-type")) {
-    headers.set("content-type", "application/json");
-  }
-
-  return {
-    ...rest,
-    body: JSON.stringify(body),
-    headers,
-  };
-}
-
 export function createHttpClient(options: CreateHttpClientOptions = {}): HttpClient {
   const fetchFn = options.fetchFn ?? fetch;
 
@@ -97,7 +51,13 @@ export function createHttpClient(options: CreateHttpClientOptions = {}): HttpCli
       return response;
     }
 
-    const errorBody = await readErrorBody(response);
+    let errorBody: string | undefined;
+
+    try {
+      errorBody = (await response.text()).trim() || undefined;
+    } catch {
+      errorBody = undefined;
+    }
 
     throw new HttpError(
       "HTTP_ERROR",
@@ -116,8 +76,40 @@ export function createHttpClient(options: CreateHttpClientOptions = {}): HttpCli
     input: string | URL,
     init: HttpJsonRequestOptions = {},
   ): Promise<T> {
-    const response = await request(input, normalizeJsonRequest(init));
-    return (await response.json()) as T;
+    const { body, ...rest } = init;
+
+    const shouldSerializeJsonBody =
+      typeof body === "object" &&
+      body !== null &&
+      !(body instanceof ArrayBuffer) &&
+      !ArrayBuffer.isView(body) &&
+      !(body instanceof Blob) &&
+      !(body instanceof FormData) &&
+      !(body instanceof URLSearchParams) &&
+      !(body instanceof ReadableStream);
+
+    if (!shouldSerializeJsonBody) {
+      const response = await request(input, {
+        ...rest,
+        ...(body === undefined ? {} : { body }),
+      });
+
+      return response.json() as Promise<T>;
+    }
+
+    const headers = new Headers(init.headers);
+
+    if (!headers.has("content-type")) {
+      headers.set("content-type", "application/json");
+    }
+
+    const response = await request(input, {
+      ...rest,
+      body: JSON.stringify(body satisfies JsonBody),
+      headers,
+    });
+
+    return response.json() as Promise<T>;
   }
 
   return {

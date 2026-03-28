@@ -48,7 +48,3 @@ export class HttpError extends AppError {
     this.url = options.url;
   }
 }
-
-export function isAppError(error: unknown): error is AppError {
-  return error instanceof AppError;
-}
