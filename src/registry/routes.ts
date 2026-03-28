@@ -3,7 +3,6 @@ import { getProvider } from "./providers.js";
 
 type RouteInput = Omit<ModelRoute, "providerType">;
 
-const PROVISIONAL_OPENAI_NOTE = "Provisional canonical mapping pending provider confirmation.";
 const INFERRED_TOGETHER_FLUX_NOTE =
   "Route naming is inferred from vendor lineage and should be verified against provider docs.";
 
@@ -21,8 +20,7 @@ export const MODEL_ROUTES = [
     routeModelId: "gpt-image-1.5",
     rawModelId: "gpt-image-1.5",
     status: "preview",
-    confidence: "medium",
-    notes: PROVISIONAL_OPENAI_NOTE,
+    confidence: "high",
   }),
   defineRoute({
     canonicalModelId: "gpt-image-1",
@@ -38,8 +36,7 @@ export const MODEL_ROUTES = [
     routeModelId: "gpt-image-1-mini",
     rawModelId: "gpt-image-1-mini",
     status: "preview",
-    confidence: "medium",
-    notes: PROVISIONAL_OPENAI_NOTE,
+    confidence: "high",
   }),
   defineRoute({
     canonicalModelId: "gemini-2.5-flash-image-preview",

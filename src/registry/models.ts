@@ -13,7 +13,7 @@ const MODEL_DEFINITIONS = [
     vendor: "OpenAI",
     aliases: ["gpt-image-latest", "gpt-image-1-5"],
     status: "preview",
-    confidence: "medium",
+    confidence: "high",
   },
   {
     canonicalModelId: "gpt-image-1",
@@ -29,7 +29,7 @@ const MODEL_DEFINITIONS = [
     vendor: "OpenAI",
     aliases: ["gpt-image-mini", "gpt-image-1-small"],
     status: "preview",
-    confidence: "medium",
+    confidence: "high",
   },
   {
     canonicalModelId: "gemini-2.5-flash-image-preview",

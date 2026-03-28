@@ -1,6 +1,9 @@
+import type { ProviderId } from "./types.js";
+
 export type AppErrorCode =
   | "CONFIG_ENV_MISSING"
   | "CONFIG_ENV_INVALID"
+  | "PROVIDER_AUTH_ERROR"
   | "HTTP_ERROR"
   | "HTTP_NETWORK_ERROR";
 
@@ -22,6 +25,15 @@ export class AppError extends Error {
 }
 
 export class ConfigError extends AppError {}
+
+export class ProviderAuthError extends AppError {
+  readonly provider: ProviderId;
+
+  constructor(provider: ProviderId, message: string, options: AppErrorOptions = {}) {
+    super("PROVIDER_AUTH_ERROR", message, options);
+    this.provider = provider;
+  }
+}
 
 export type HttpErrorOptions = AppErrorOptions & {
   method: string;
