@@ -1,6 +1,11 @@
 import type { Environment } from "../config/env.js";
 import type { ModelRoute, ProviderId } from "../core/types.js";
-import { renderNormalizedOutput } from "../io/outputs.js";
+import {
+  renderGenerateErrorOutput,
+  renderGenerateJsonOutput,
+  renderGenerateTextOutput,
+  saveGenerateOutputs,
+} from "../io/generate-output.js";
 import type { ImageGenerationProvider, ProviderImageGenerationRequest } from "../providers/base.js";
 import { createGoogleProvider } from "../providers/google.js";
 import { createOpenAiProvider } from "../providers/openai.js";
@@ -9,7 +14,9 @@ import { createTogetherProvider } from "../providers/together.js";
 import { getCanonicalModel, getRoutesForModel } from "../registry/models.js";
 
 export type GenerateCommandOptions = Omit<ProviderImageGenerationRequest, "canonicalModelId"> & {
+  json?: boolean;
   model: string;
+  outputDir?: string;
   provider?: ProviderId;
 };
 
@@ -24,6 +31,7 @@ export type GenerateCommandDependencies = {
     options: { env?: Environment },
   ) => ImageGenerationProvider;
   env?: Environment;
+  fetchFn?: typeof fetch;
 };
 
 type RouteSelectionResult =
@@ -135,11 +143,14 @@ export async function runGenerateCommand(
   const routeSelection = selectGenerateRoute(options);
 
   if (!routeSelection.ok) {
-    return routeSelection;
+    return {
+      lines: renderGenerateErrorOutput(routeSelection.lines, options.json ?? false),
+      ok: false,
+    };
   }
 
   try {
-    const { model: _model, provider: _provider, ...request } = options;
+    const { json: asJson, model: _model, outputDir, provider: _provider, ...request } = options;
     const providerOptions = dependencies.env === undefined ? {} : { env: dependencies.env };
     const provider =
       dependencies.createProvider?.(routeSelection.route.provider, providerOptions) ??
@@ -148,14 +159,21 @@ export async function runGenerateCommand(
       canonicalModelId: routeSelection.canonicalModelId,
       ...request,
     });
+    const outputs = await saveGenerateOutputs(result, {
+      ...(dependencies.fetchFn === undefined ? {} : { fetchFn: dependencies.fetchFn }),
+      ...(outputDir === undefined ? {} : { outputDir }),
+    });
 
     return {
-      lines: renderNormalizedOutput(result),
+      lines:
+        asJson === true
+          ? renderGenerateJsonOutput(result, outputs)
+          : renderGenerateTextOutput(result, outputs),
       ok: true,
     };
   } catch (error) {
     return {
-      lines: errorToLines(error),
+      lines: renderGenerateErrorOutput(errorToLines(error), options.json ?? false),
       ok: false,
     };
   }

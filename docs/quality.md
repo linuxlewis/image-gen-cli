@@ -15,6 +15,7 @@
 - HTTP client regression coverage now includes raw byte payload passthrough so binary request bodies are not JSON-normalized.
 - Replicate provider coverage now exercises supported-route detection, request translation, async prediction polling, auth gating, terminal failure handling, and normalized output metadata shaping.
 - Generate command coverage now exercises canonical model lookup, single-route auto-selection, ambiguous-route failures, provider-specific route selection, provider config errors, and CLI wiring through `run-cli.ts`.
+- Generate output coverage now includes deterministic `--json` rendering, JSON error output, and file-save behavior for inline and URL-backed assets.
 
 ## Known Gaps
 

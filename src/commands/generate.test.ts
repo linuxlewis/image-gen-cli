@@ -1,3 +1,7 @@
+import { mkdtemp, readFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { describe, expect, it, vi } from "vitest";
 
 import { ConfigError } from "../core/errors.js";
@@ -10,6 +14,7 @@ function createProviderMock(): ImageGenerationProvider {
       async (request): Promise<NormalizedProviderResult<{ ok: true }>> => ({
         assets: [
           {
+            base64Data: Buffer.from("mock-image").toString("base64"),
             filename: `${request.canonicalModelId}.png`,
             mimeType: "image/png",
           },
@@ -86,9 +91,10 @@ describe("runGenerateCommand", () => {
     ).resolves.toEqual({
       lines: [
         "Provider: google",
-        "Model: imagen-4-fast",
-        "Assets: 1",
-        "Asset 1: imagen-4-fast.png | mime=image/png",
+        "Canonical model: imagen-4-fast",
+        "Provider model: mock-route",
+        "Outputs: 1",
+        "Output 1: imagen-4-fast.png | mime=image/png | inline-data=16 chars",
       ],
       ok: true,
     });
@@ -98,6 +104,69 @@ describe("runGenerateCommand", () => {
       canonicalModelId: "imagen-4-fast",
       prompt: "A product photo of a glass bottle",
     });
+  });
+
+  it("renders deterministic JSON output when requested", async () => {
+    await expect(
+      runGenerateCommand(
+        {
+          json: true,
+          model: "imagen-4-fast",
+          prompt: "A product photo of a glass bottle",
+        },
+        { createProvider: () => createProviderMock() },
+      ),
+    ).resolves.toEqual({
+      lines: [
+        "{",
+        '  "canonicalModel": "imagen-4-fast",',
+        '  "outputs": [',
+        "    {",
+        '      "filename": "imagen-4-fast.png",',
+        '      "inlineData": {',
+        '        "encoding": "base64",',
+        '        "length": 16',
+        "      },",
+        '      "mimeType": "image/png"',
+        "    }",
+        "  ],",
+        '  "provider": "google",',
+        '  "providerModel": "mock-route",',
+        '  "rawResponse": {',
+        '    "ok": true',
+        "  }",
+        "}",
+      ],
+      ok: true,
+    });
+  });
+
+  it("saves generated files when an output directory is provided", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "image-gen-command-"));
+
+    await expect(
+      runGenerateCommand(
+        {
+          model: "imagen-4-fast",
+          outputDir: directory,
+          prompt: "A product photo of a glass bottle",
+        },
+        { createProvider: () => createProviderMock() },
+      ),
+    ).resolves.toEqual({
+      lines: [
+        "Provider: google",
+        "Canonical model: imagen-4-fast",
+        "Provider model: mock-route",
+        "Outputs: 1",
+        `Output 1: ${join(directory, "imagen-4-fast-1.png")} | mime=image/png | inline-data=16 chars | saved=${join(directory, "imagen-4-fast-1.png")}`,
+      ],
+      ok: true,
+    });
+
+    await expect(readFile(join(directory, "imagen-4-fast-1.png"), "utf8")).resolves.toBe(
+      "mock-image",
+    );
   });
 
   it("returns provider configuration failures as user-visible errors", async () => {
@@ -118,6 +187,32 @@ describe("runGenerateCommand", () => {
       ),
     ).resolves.toEqual({
       lines: ['Provider "openai" requires OPENAI_API_KEY to be set.'],
+      ok: false,
+    });
+  });
+
+  it("returns deterministic JSON errors when requested", async () => {
+    await expect(
+      runGenerateCommand(
+        {
+          json: true,
+          model: "flux-2-pro",
+          prompt: "A studio product shot",
+        },
+        { createProvider: () => createProviderMock() },
+      ),
+    ).resolves.toEqual({
+      lines: [
+        "{",
+        '  "error": {',
+        '    "messages": [',
+        '      "Ambiguous provider selection for model flux-2-pro.",',
+        '      "Available providers: together, replicate",',
+        '      "Pass --provider <provider> to choose a route."',
+        "    ]",
+        "  }",
+        "}",
+      ],
       ok: false,
     });
   });
