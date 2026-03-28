@@ -1,23 +1,26 @@
-import { type Environment, requireProviderApiKey } from "../config/env.js";
-import { ProviderError } from "../core/errors.js";
+import type { Environment } from "../config/env.js";
+import { requireProviderApiKey } from "../config/env.js";
+import { HttpError, ProviderAuthError, ProviderError } from "../core/errors.js";
 import type { CanonicalModelId, ModelRoute } from "../core/types.js";
 import { type HttpClient, createHttpClient } from "../http/client.js";
 import type { NormalizedOutputAsset } from "../io/outputs.js";
 import { getRouteForCanonicalModelIdAndProvider } from "../registry/routes.js";
 import type {
-  ProviderAdapter,
-  ProviderGenerateRequest,
-  ProviderGenerateResult,
-  ProviderInvocationOptions,
+  ImageGenerationProvider,
+  ImageOutputFormat,
+  NormalizedProviderResult,
+  ProviderImageGenerationRequest,
 } from "./base.js";
 
 const REPLICATE_API_BASE_URL = "https://api.replicate.com/v1";
 const REPLICATE_TERMINAL_STATUSES = ["succeeded", "failed", "canceled"] as const;
 const DEFAULT_POLL_INTERVAL_MS = 1_000;
 const DEFAULT_MAX_POLL_ATTEMPTS = 120;
+const REPLICATE_AUTH_ERROR_MESSAGE =
+  "Replicate authentication failed. Check that REPLICATE_API_TOKEN is set to a valid API token.";
 
 type ReplicateRouteHandler = {
-  buildInput: (request: ProviderGenerateRequest) => Record<string, unknown>;
+  buildInput: (request: ProviderImageGenerationRequest) => Record<string, unknown>;
 };
 
 export type ReplicatePredictionStatus =
@@ -54,9 +57,9 @@ export type ReplicatePredictionSubmission = {
   };
 };
 
-export type ReplicateProviderOptions = {
+export type CreateReplicateProviderOptions = {
   apiBaseUrl?: string;
-  defaultEnv?: Environment;
+  env?: Environment;
   httpClient?: HttpClient;
   maxPollAttempts?: number;
   pollIntervalMs?: number;
@@ -65,26 +68,52 @@ export type ReplicateProviderOptions = {
 
 const REPLICATE_ROUTE_HANDLERS: Partial<Record<CanonicalModelId, ReplicateRouteHandler>> = {
   "flux-1-schnell": {
-    buildInput: buildFluxInput,
+    buildInput: buildFluxSchnellInput,
   },
   "flux-1-kontext-pro": {
-    buildInput: buildFluxInput,
+    buildInput: buildFluxKontextInput,
   },
   "flux-2-pro": {
-    buildInput: buildFluxInput,
+    buildInput: buildFlux2Input,
   },
   "flux-2-dev": {
-    buildInput: buildFluxInput,
+    buildInput: buildFlux2Input,
   },
   "flux-2-flex": {
-    buildInput: buildFluxInput,
+    buildInput: buildFlux2Input,
   },
   "kling-v1": {
     buildInput: buildKlingInput,
   },
 };
 
-function buildFluxInput(request: ProviderGenerateRequest): Record<string, unknown> {
+function normalizeReplicateOutputFormat(
+  outputFormat: ProviderImageGenerationRequest["outputFormat"],
+): "jpg" | "png" | "webp" | undefined {
+  if (!outputFormat) {
+    return undefined;
+  }
+
+  if (outputFormat === "jpeg") {
+    return "jpg";
+  }
+
+  return outputFormat;
+}
+
+function normalizeProviderOutputFormat(outputFormat: unknown): ImageOutputFormat | undefined {
+  if (outputFormat === "jpg" || outputFormat === "jpeg") {
+    return "jpeg";
+  }
+
+  if (outputFormat === "png" || outputFormat === "webp") {
+    return outputFormat;
+  }
+
+  return undefined;
+}
+
+function buildFluxSchnellInput(request: ProviderImageGenerationRequest): Record<string, unknown> {
   const input: Record<string, unknown> = {
     prompt: request.prompt,
   };
@@ -93,26 +122,80 @@ function buildFluxInput(request: ProviderGenerateRequest): Record<string, unknow
     input.aspect_ratio = request.aspectRatio;
   }
 
-  if (request.negativePrompt) {
-    input.negative_prompt = request.negativePrompt;
+  const outputFormat = normalizeReplicateOutputFormat(request.outputFormat);
+
+  if (outputFormat) {
+    input.output_format = outputFormat;
   }
 
-  if (request.outputFormat) {
-    input.output_format = request.outputFormat;
+  if (request.outputCompression !== undefined) {
+    input.output_quality = request.outputCompression;
   }
 
   if (request.seed !== undefined) {
     input.seed = request.seed;
   }
 
+  return input;
+}
+
+function buildFluxKontextInput(request: ProviderImageGenerationRequest): Record<string, unknown> {
+  const input: Record<string, unknown> = {
+    prompt: request.prompt,
+  };
+
+  if (request.aspectRatio) {
+    input.aspect_ratio = request.aspectRatio;
+  }
+
   if (request.inputImage) {
     input.input_image = request.inputImage;
+  }
+
+  const outputFormat = normalizeReplicateOutputFormat(request.outputFormat);
+
+  if (outputFormat) {
+    input.output_format = outputFormat;
+  }
+
+  if (request.seed !== undefined) {
+    input.seed = request.seed;
   }
 
   return input;
 }
 
-function buildKlingInput(request: ProviderGenerateRequest): Record<string, unknown> {
+function buildFlux2Input(request: ProviderImageGenerationRequest): Record<string, unknown> {
+  const input: Record<string, unknown> = {
+    prompt: request.prompt,
+  };
+
+  if (request.aspectRatio) {
+    input.aspect_ratio = request.aspectRatio;
+  }
+
+  if (request.inputImage) {
+    input.input_images = [request.inputImage];
+  }
+
+  const outputFormat = normalizeReplicateOutputFormat(request.outputFormat);
+
+  if (outputFormat) {
+    input.output_format = outputFormat;
+  }
+
+  if (request.outputCompression !== undefined) {
+    input.output_quality = request.outputCompression;
+  }
+
+  if (request.seed !== undefined) {
+    input.seed = request.seed;
+  }
+
+  return input;
+}
+
+function buildKlingInput(request: ProviderImageGenerationRequest): Record<string, unknown> {
   const input: Record<string, unknown> = {
     prompt: request.prompt,
   };
@@ -129,12 +212,8 @@ function buildKlingInput(request: ProviderGenerateRequest): Record<string, unkno
     input.negative_prompt = request.negativePrompt;
   }
 
-  if (request.seed !== undefined) {
-    input.seed = request.seed;
-  }
-
   if (request.inputImage) {
-    input.image = request.inputImage;
+    input.start_image = request.inputImage;
   }
 
   return input;
@@ -146,10 +225,22 @@ function getReplicateRouteHandler(
   return REPLICATE_ROUTE_HANDLERS[canonicalModelId];
 }
 
-function getRequiredReplicateRoute(canonicalModelId: CanonicalModelId): ModelRoute {
+export function getReplicateRouteForCanonicalModel(
+  canonicalModelId: CanonicalModelId,
+): ModelRoute | undefined {
   const route = getRouteForCanonicalModelIdAndProvider(canonicalModelId, "replicate");
 
-  if (route && getReplicateRouteHandler(canonicalModelId)) {
+  if (!route || !getReplicateRouteHandler(canonicalModelId)) {
+    return undefined;
+  }
+
+  return route;
+}
+
+function getRequiredReplicateRoute(canonicalModelId: CanonicalModelId): ModelRoute {
+  const route = getReplicateRouteForCanonicalModel(canonicalModelId);
+
+  if (route) {
     return route;
   }
 
@@ -167,13 +258,44 @@ function createReplicateHeaders(apiToken: string): Headers {
   });
 }
 
+function getAuthErrorMessage(error: HttpError): string {
+  const responseBody = error.details?.responseBody;
+
+  if (typeof responseBody !== "string") {
+    return REPLICATE_AUTH_ERROR_MESSAGE;
+  }
+
+  try {
+    const parsed = JSON.parse(responseBody);
+    const providerMessage =
+      typeof parsed.detail === "string"
+        ? parsed.detail.trim()
+        : typeof parsed.error === "string"
+          ? parsed.error.trim()
+          : typeof parsed.title === "string"
+            ? parsed.title.trim()
+            : undefined;
+
+    if (providerMessage) {
+      return `Replicate authentication failed: ${providerMessage}`;
+    }
+  } catch {
+    // Keep the fallback message when the provider response is not valid JSON.
+  }
+
+  return REPLICATE_AUTH_ERROR_MESSAGE;
+}
+
 function isTerminalReplicateStatus(
   status: string,
 ): status is (typeof REPLICATE_TERMINAL_STATUSES)[number] {
   return REPLICATE_TERMINAL_STATUSES.some((terminalStatus) => terminalStatus === status);
 }
 
-function getPredictionPollUrl(prediction: ReplicatePrediction): string {
+function getPredictionPollUrl(
+  prediction: ReplicatePrediction,
+  apiBaseUrl = REPLICATE_API_BASE_URL,
+): string {
   const pollUrl = prediction.urls?.get;
 
   if (pollUrl) {
@@ -181,7 +303,7 @@ function getPredictionPollUrl(prediction: ReplicatePrediction): string {
   }
 
   if (prediction.id) {
-    return `${REPLICATE_API_BASE_URL}/predictions/${prediction.id}`;
+    return `${apiBaseUrl}/predictions/${prediction.id}`;
   }
 
   throw new ProviderError(
@@ -191,15 +313,13 @@ function getPredictionPollUrl(prediction: ReplicatePrediction): string {
   );
 }
 
-export function isReplicateRouteSupported(route: ModelRoute): boolean {
-  return (
-    route.provider === "replicate" && Boolean(getReplicateRouteHandler(route.canonicalModelId))
-  );
+export function supportsReplicateCanonicalModel(canonicalModelId: CanonicalModelId): boolean {
+  return getReplicateRouteForCanonicalModel(canonicalModelId) !== undefined;
 }
 
 export function buildReplicatePredictionSubmission(
   route: ModelRoute,
-  request: ProviderGenerateRequest,
+  request: ProviderImageGenerationRequest,
   apiToken: string,
   apiBaseUrl = REPLICATE_API_BASE_URL,
 ): ReplicatePredictionSubmission {
@@ -235,6 +355,7 @@ export function buildReplicatePredictionSubmission(
 export async function pollReplicatePredictionUntilTerminal(
   prediction: ReplicatePrediction,
   options: {
+    apiBaseUrl?: string;
     headers: Headers;
     httpClient: HttpClient;
     maxPollAttempts?: number;
@@ -248,7 +369,7 @@ export async function pollReplicatePredictionUntilTerminal(
     return currentPrediction;
   }
 
-  const pollUrl = getPredictionPollUrl(currentPrediction);
+  const pollUrl = getPredictionPollUrl(currentPrediction, options.apiBaseUrl);
   const maxPollAttempts = options.maxPollAttempts ?? DEFAULT_MAX_POLL_ATTEMPTS;
   const pollIntervalMs = options.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
   const sleep = options.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
@@ -320,43 +441,46 @@ function normalizeReplicateOutputValue(value: unknown): NormalizedOutputAsset[] 
   ];
 }
 
+function normalizeCreatedAt(createdAt: string | undefined): number | undefined {
+  if (!createdAt) {
+    return undefined;
+  }
+
+  const timestamp = Date.parse(createdAt);
+
+  return Number.isNaN(timestamp) ? undefined : timestamp;
+}
+
 export function normalizeReplicateResult(
   route: ModelRoute,
   prediction: ReplicatePrediction,
-): ProviderGenerateResult {
+): NormalizedProviderResult<ReplicatePrediction> {
+  const outputFormat = normalizeProviderOutputFormat(prediction.input?.output_format);
+  const createdAt = normalizeCreatedAt(prediction.created_at);
+
   return {
     assets: normalizeReplicateOutputValue(prediction.output),
+    canonicalModelId: route.canonicalModelId,
+    ...(createdAt === undefined ? {} : { createdAt }),
     model: route.canonicalModelId,
+    ...(outputFormat ? { outputFormat } : {}),
     provider: "replicate",
-    providerMetadata: {
-      prediction,
-      route: {
-        canonicalModelId: route.canonicalModelId,
-        rawModelId: route.rawModelId,
-        routeModelId: route.routeModelId,
-        versionId: route.versionId,
-      },
-    },
+    rawResponse: prediction,
+    routeModelId: route.routeModelId,
   };
 }
 
-export function createReplicateProvider(options: ReplicateProviderOptions = {}): ProviderAdapter & {
-  resolveRoute: (canonicalModelId: CanonicalModelId) => ModelRoute;
-} {
-  const defaultHttpClient = options.httpClient ?? createHttpClient();
+export function createReplicateProvider(
+  options: CreateReplicateProviderOptions = {},
+): ImageGenerationProvider<ReplicatePrediction> {
+  const apiToken = requireProviderApiKey("replicate", options.env);
+  const httpClient = options.httpClient ?? createHttpClient();
 
   return {
-    provider: "replicate",
-    supportsRoute: isReplicateRouteSupported,
-    resolveRoute: getRequiredReplicateRoute,
-    async generate(
-      request: ProviderGenerateRequest,
-      invocationOptions: ProviderInvocationOptions = {},
-    ): Promise<ProviderGenerateResult> {
-      const env = invocationOptions.env ?? options.defaultEnv ?? process.env;
-      const apiToken = requireProviderApiKey("replicate", env);
+    async generateImage(
+      request: ProviderImageGenerationRequest,
+    ): Promise<NormalizedProviderResult<ReplicatePrediction>> {
       const route = getRequiredReplicateRoute(request.canonicalModelId);
-      const httpClient = invocationOptions.httpClient ?? defaultHttpClient;
       const submission = buildReplicatePredictionSubmission(
         route,
         request,
@@ -364,43 +488,58 @@ export function createReplicateProvider(options: ReplicateProviderOptions = {}):
         options.apiBaseUrl,
       );
 
-      const initialPrediction = await httpClient.requestJson<ReplicatePrediction>(
-        submission.endpoint,
-        {
-          body: submission.body,
-          headers: submission.headers,
-          method: "POST",
-        },
-      );
-
-      const terminalPrediction = await pollReplicatePredictionUntilTerminal(initialPrediction, {
-        headers: submission.headers,
-        httpClient,
-        ...(options.maxPollAttempts === undefined
-          ? {}
-          : { maxPollAttempts: options.maxPollAttempts }),
-        ...((invocationOptions.pollIntervalMs ?? options.pollIntervalMs) === undefined
-          ? {}
-          : { pollIntervalMs: invocationOptions.pollIntervalMs ?? options.pollIntervalMs }),
-        ...((invocationOptions.sleep ?? options.sleep) === undefined
-          ? {}
-          : { sleep: invocationOptions.sleep ?? options.sleep }),
-      });
-
-      if (terminalPrediction.status !== "succeeded") {
-        throw new ProviderError(
-          "PROVIDER_PREDICTION_FAILED",
-          `Replicate prediction ${terminalPrediction.id} ended with status "${terminalPrediction.status}".`,
+      try {
+        const initialPrediction = await httpClient.requestJson<ReplicatePrediction>(
+          submission.endpoint,
           {
-            details: {
-              error: terminalPrediction.error,
-              prediction: terminalPrediction,
-            },
+            body: submission.body,
+            headers: submission.headers,
+            method: "POST",
           },
         );
-      }
 
-      return normalizeReplicateResult(route, terminalPrediction);
+        const terminalPrediction = await pollReplicatePredictionUntilTerminal(initialPrediction, {
+          ...(options.apiBaseUrl === undefined ? {} : { apiBaseUrl: options.apiBaseUrl }),
+          headers: submission.headers,
+          httpClient,
+          ...(options.maxPollAttempts === undefined
+            ? {}
+            : { maxPollAttempts: options.maxPollAttempts }),
+          ...(options.pollIntervalMs === undefined
+            ? {}
+            : { pollIntervalMs: options.pollIntervalMs }),
+          ...(options.sleep === undefined ? {} : { sleep: options.sleep }),
+        });
+
+        if (terminalPrediction.status !== "succeeded") {
+          throw new ProviderError(
+            "PROVIDER_PREDICTION_FAILED",
+            `Replicate prediction ${terminalPrediction.id} ended with status "${terminalPrediction.status}".`,
+            {
+              details: {
+                error: terminalPrediction.error,
+                prediction: terminalPrediction,
+              },
+            },
+          );
+        }
+
+        return normalizeReplicateResult(route, terminalPrediction);
+      } catch (error) {
+        if (error instanceof HttpError && (error.status === 401 || error.status === 403)) {
+          throw new ProviderAuthError("replicate", getAuthErrorMessage(error), {
+            cause: error,
+            details: {
+              ...(error.details ?? {}),
+              status: error.status,
+            },
+          });
+        }
+
+        throw error;
+      }
     },
+    id: "replicate",
+    supportsCanonicalModel: supportsReplicateCanonicalModel,
   };
 }
