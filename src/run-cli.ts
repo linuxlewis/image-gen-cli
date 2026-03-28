@@ -3,6 +3,7 @@ import { renderModelsList } from "./commands/models-list.js";
 import { renderProvidersList } from "./commands/providers-list.js";
 import { renderRoutesList } from "./commands/routes-list.js";
 import { MODEL_FAMILIES, PROVIDER_IDS } from "./core/types.js";
+import { renderGenerateErrorOutput } from "./io/generate-output.js";
 
 type CliResult = {
   exitCode: number;
@@ -31,13 +32,15 @@ function renderHelp(): string[] {
     "  image-gen-cli providers list",
     "  image-gen-cli models list [--family <family>] [--provider <provider>]",
     "  image-gen-cli routes list --model <model> [--provider <provider>]",
-    "  image-gen-cli generate --model <model> --prompt <prompt> [--provider <provider>]",
+    "  image-gen-cli generate --model <model> --prompt <prompt> [--provider <provider>] [--json] [--output-dir <dir>]",
     "",
     "Options:",
     "  -h, --help             Show this help message",
     `  --family <family>      Filter models by family (${MODEL_FAMILIES.join(", ")})`,
+    "  --json                 Render deterministic JSON for generate output",
     `  --provider <provider>  Filter by provider (${PROVIDER_IDS.join(", ")})`,
     "  --model <model>        Select a canonical model id or alias for route lookup",
+    "  --output-dir <dir>     Save generated assets under the target directory",
     "  --prompt <prompt>      Text prompt for image generation",
   ];
 }
@@ -127,32 +130,38 @@ async function parseGenerate(
   args: readonly string[],
   dependencies: CliDependencies,
 ): Promise<CliResult> {
+  const asJson = args.includes("--json");
   const model = readFlagValue(args, "--model");
+  const outputDir = readFlagValue(args, "--output-dir");
   const prompt = readFlagValue(args, "--prompt");
   const providerValue = readFlagValue(args, "--provider");
   const provider = findAllowedValue(PROVIDER_IDS, providerValue);
+  const errorResult = (messages: readonly string[]): CliResult => ({
+    exitCode: 1,
+    lines: renderGenerateErrorOutput(messages, asJson),
+  });
 
   if (!model) {
-    return {
-      exitCode: 1,
-      lines: ["Missing required flag: --model"],
-    };
+    return errorResult(["Missing required flag: --model"]);
   }
 
   if (!prompt) {
-    return {
-      exitCode: 1,
-      lines: ["Missing required flag: --prompt"],
-    };
+    return errorResult(["Missing required flag: --prompt"]);
   }
 
   if (providerValue && !provider) {
-    return invalidProviderResult(providerValue);
+    return errorResult(invalidProviderResult(providerValue).lines);
+  }
+
+  if (args.includes("--output-dir") && !outputDir) {
+    return errorResult(["Missing required value for flag: --output-dir"]);
   }
 
   const result = await runGenerateCommand(
     {
+      ...(asJson ? { json: true } : {}),
       model,
+      ...(outputDir ? { outputDir } : {}),
       prompt,
       ...(provider ? { provider } : {}),
     },

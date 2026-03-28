@@ -31,13 +31,15 @@ describe("renderCliOutput", () => {
       "  image-gen-cli providers list",
       "  image-gen-cli models list [--family <family>] [--provider <provider>]",
       "  image-gen-cli routes list --model <model> [--provider <provider>]",
-      "  image-gen-cli generate --model <model> --prompt <prompt> [--provider <provider>]",
+      "  image-gen-cli generate --model <model> --prompt <prompt> [--provider <provider>] [--json] [--output-dir <dir>]",
       "",
       "Options:",
       "  -h, --help             Show this help message",
       "  --family <family>      Filter models by family (gpt-image, gemini-image, imagen, flux, kling)",
+      "  --json                 Render deterministic JSON for generate output",
       "  --provider <provider>  Filter by provider (openai, google, together, replicate)",
       "  --model <model>        Select a canonical model id or alias for route lookup",
+      "  --output-dir <dir>     Save generated assets under the target directory",
       "  --prompt <prompt>      Text prompt for image generation",
     ]);
   });
@@ -122,9 +124,36 @@ describe("renderCliOutput", () => {
       ),
     ).resolves.toEqual([
       "Provider: google",
-      "Model: imagen-4-fast",
-      "Assets: 1",
-      "Asset 1: imagen-4-fast.png | mime=image/png",
+      "Canonical model: imagen-4-fast",
+      "Provider model: mock-route",
+      "Outputs: 1",
+      "Output 1: imagen-4-fast.png | mime=image/png",
+    ]);
+  });
+
+  it("renders generate JSON output through the command wiring", async () => {
+    const createProvider = vi.fn(createGenerateProviderMock);
+
+    await expect(
+      renderCliOutput(
+        ["generate", "--model", "imagen-4-fast", "--prompt", "A studio product shot", "--json"],
+        { createProvider },
+      ),
+    ).resolves.toEqual([
+      "{",
+      '  "canonicalModel": "imagen-4-fast",',
+      '  "outputs": [',
+      "    {",
+      '      "filename": "imagen-4-fast.png",',
+      '      "mimeType": "image/png"',
+      "    }",
+      "  ],",
+      '  "provider": "google",',
+      '  "providerModel": "mock-route",',
+      '  "rawResponse": {',
+      '    "ok": true',
+      "  }",
+      "}",
     ]);
   });
 });
@@ -167,6 +196,7 @@ describe("runCli", () => {
   it("returns a non-zero exit code when generate is missing required flags", async () => {
     await expect(runCli(["generate", "--model", "imagen-4-fast"])).resolves.toBe(1);
     await expect(runCli(["generate", "--prompt", "A studio product shot"])).resolves.toBe(1);
+    await expect(runCli(["generate", "--model", "imagen-4-fast", "--output-dir"])).resolves.toBe(1);
   });
 
   it("returns a non-zero exit code for an unknown route model", async () => {
