@@ -3,6 +3,10 @@ import { getProvider } from "./providers.js";
 
 type RouteInput = Omit<ModelRoute, "providerType">;
 
+const PROVISIONAL_OPENAI_NOTE = "Provisional canonical mapping pending provider confirmation.";
+const INFERRED_TOGETHER_FLUX_NOTE =
+  "Route naming is inferred from vendor lineage and should be verified against provider docs.";
+
 function defineRoute(route: RouteInput): ModelRoute {
   return {
     ...route,
@@ -18,7 +22,7 @@ export const MODEL_ROUTES = [
     rawModelId: "gpt-image-1.5",
     status: "preview",
     confidence: "medium",
-    notes: "Provisional canonical mapping pending provider confirmation.",
+    notes: PROVISIONAL_OPENAI_NOTE,
   }),
   defineRoute({
     canonicalModelId: "gpt-image-1",
@@ -35,7 +39,7 @@ export const MODEL_ROUTES = [
     rawModelId: "gpt-image-1-mini",
     status: "preview",
     confidence: "medium",
-    notes: "Provisional canonical mapping pending provider confirmation.",
+    notes: PROVISIONAL_OPENAI_NOTE,
   }),
   defineRoute({
     canonicalModelId: "gemini-2.5-flash-image-preview",
@@ -92,8 +96,7 @@ export const MODEL_ROUTES = [
     rawModelId: "FLUX.2-pro",
     status: "preview",
     confidence: "low",
-    notes:
-      "Route naming is inferred from vendor lineage and should be verified against provider docs.",
+    notes: INFERRED_TOGETHER_FLUX_NOTE,
   }),
   defineRoute({
     canonicalModelId: "flux-2-dev",
@@ -102,8 +105,7 @@ export const MODEL_ROUTES = [
     rawModelId: "FLUX.2-dev",
     status: "preview",
     confidence: "low",
-    notes:
-      "Route naming is inferred from vendor lineage and should be verified against provider docs.",
+    notes: INFERRED_TOGETHER_FLUX_NOTE,
   }),
   defineRoute({
     canonicalModelId: "flux-2-flex",
@@ -112,8 +114,7 @@ export const MODEL_ROUTES = [
     rawModelId: "FLUX.2-flex",
     status: "preview",
     confidence: "low",
-    notes:
-      "Route naming is inferred from vendor lineage and should be verified against provider docs.",
+    notes: INFERRED_TOGETHER_FLUX_NOTE,
   }),
   defineRoute({
     canonicalModelId: "kling-v1",
