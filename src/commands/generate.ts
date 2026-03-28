@@ -87,10 +87,19 @@ export function selectGenerateRoute(
   }
 
   if (routes.length === 1) {
+    const route = routes[0];
+
+    if (!route) {
+      return {
+        lines: [`No routes are configured for model ${model.canonicalModelId}.`],
+        ok: false,
+      };
+    }
+
     return {
       canonicalModelId: model.canonicalModelId,
       ok: true,
-      route: routes[0],
+      route,
     };
   }
 
@@ -131,9 +140,10 @@ export async function runGenerateCommand(
 
   try {
     const { model: _model, provider: _provider, ...request } = options;
+    const providerOptions = dependencies.env === undefined ? {} : { env: dependencies.env };
     const provider =
-      dependencies.createProvider?.(routeSelection.route.provider, { env: dependencies.env }) ??
-      createProvider(routeSelection.route.provider, { env: dependencies.env });
+      dependencies.createProvider?.(routeSelection.route.provider, providerOptions) ??
+      createProvider(routeSelection.route.provider, providerOptions);
     const result = await provider.generateImage({
       canonicalModelId: routeSelection.canonicalModelId,
       ...request,

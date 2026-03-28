@@ -1,24 +1,26 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { ConfigError } from "../core/errors.js";
-import type { ImageGenerationProvider } from "../providers/base.js";
+import type { ImageGenerationProvider, NormalizedProviderResult } from "../providers/base.js";
 import { runGenerateCommand, selectGenerateRoute } from "./generate.js";
 
 function createProviderMock(): ImageGenerationProvider {
   return {
-    generateImage: vi.fn(async (request) => ({
-      assets: [
-        {
-          filename: `${request.canonicalModelId}.png`,
-          mimeType: "image/png",
-        },
-      ],
-      canonicalModelId: request.canonicalModelId,
-      model: request.canonicalModelId,
-      provider: "google",
-      rawResponse: { ok: true },
-      routeModelId: "mock-route",
-    })),
+    generateImage: vi.fn(
+      async (request): Promise<NormalizedProviderResult<{ ok: true }>> => ({
+        assets: [
+          {
+            filename: `${request.canonicalModelId}.png`,
+            mimeType: "image/png",
+          },
+        ],
+        canonicalModelId: request.canonicalModelId,
+        model: request.canonicalModelId,
+        provider: "google",
+        rawResponse: { ok: true },
+        routeModelId: "mock-route",
+      }),
+    ),
     id: "google",
     supportsCanonicalModel: () => true,
   };
@@ -91,7 +93,7 @@ describe("runGenerateCommand", () => {
       ok: true,
     });
 
-    expect(createProvider).toHaveBeenCalledWith("google", { env: undefined });
+    expect(createProvider).toHaveBeenCalledWith("google", {});
     expect(provider.generateImage).toHaveBeenCalledWith({
       canonicalModelId: "imagen-4-fast",
       prompt: "A product photo of a glass bottle",

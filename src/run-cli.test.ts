@@ -1,18 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { ImageGenerationProvider } from "./providers/base.js";
+import type { ImageGenerationProvider, NormalizedProviderResult } from "./providers/base.js";
 import { renderCliOutput, runCli } from "./run-cli.js";
 
 function createGenerateProviderMock(): ImageGenerationProvider {
   return {
-    generateImage: vi.fn(async (request) => ({
-      assets: [{ filename: `${request.canonicalModelId}.png`, mimeType: "image/png" }],
-      canonicalModelId: request.canonicalModelId,
-      model: request.canonicalModelId,
-      provider: "google",
-      rawResponse: { ok: true },
-      routeModelId: "mock-route",
-    })),
+    generateImage: vi.fn(
+      async (request): Promise<NormalizedProviderResult<{ ok: true }>> => ({
+        assets: [{ filename: `${request.canonicalModelId}.png`, mimeType: "image/png" }],
+        canonicalModelId: request.canonicalModelId,
+        model: request.canonicalModelId,
+        provider: "google",
+        rawResponse: { ok: true },
+        routeModelId: "mock-route",
+      }),
+    ),
     id: "google",
     supportsCanonicalModel: () => true,
   };
