@@ -9,8 +9,9 @@ describe("renderRoutesList", () => {
       lines: [
         "Routes for flux-2-pro",
         "",
-        "Provider  Type        Route Model ID                Raw Model ID  Status   Confidence",
-        "together  aggregated  black-forest-labs/FLUX.2-pro  FLUX.2-pro    preview  low",
+        "Provider   Type        Route Model ID                Raw Model ID  Status   Confidence",
+        "together   aggregated  black-forest-labs/FLUX.2-pro  FLUX.2-pro    preview  low",
+        "replicate  aggregated  black-forest-labs/flux-2-pro  flux-2-pro    preview  low",
       ],
     });
   });
@@ -21,8 +22,9 @@ describe("renderRoutesList", () => {
       lines: [
         "Routes for flux-2-pro",
         "",
-        "Provider  Type        Route Model ID                Raw Model ID  Status   Confidence",
-        "together  aggregated  black-forest-labs/FLUX.2-pro  FLUX.2-pro    preview  low",
+        "Provider   Type        Route Model ID                Raw Model ID  Status   Confidence",
+        "together   aggregated  black-forest-labs/FLUX.2-pro  FLUX.2-pro    preview  low",
+        "replicate  aggregated  black-forest-labs/flux-2-pro  flux-2-pro    preview  low",
       ],
     });
   });

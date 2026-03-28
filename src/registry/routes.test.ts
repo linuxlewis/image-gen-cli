@@ -10,6 +10,11 @@ describe("route registry", () => {
         providerType: "aggregated",
         routeModelId: "black-forest-labs/FLUX.1-schnell",
       }),
+      expect.objectContaining({
+        provider: "replicate",
+        providerType: "aggregated",
+        routeModelId: "black-forest-labs/flux-schnell",
+      }),
     ]);
   });
 
