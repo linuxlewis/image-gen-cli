@@ -13,6 +13,7 @@ agent-first repo conventions so the codebase can scale without losing structure.
 |------|-------|
 | Code organization and dependency rules | [ARCHITECTURE.md](./ARCHITECTURE.md) |
 | Documentation catalog | [docs/catalog.md](./docs/catalog.md) |
+| Testing guidance | [docs/testing.md](./docs/testing.md) |
 | Quality notes and gaps | [docs/quality.md](./docs/quality.md) |
 | Design records | [docs/design/README.md](./docs/design/README.md) |
 | Active plans | [plans/active/README.md](./plans/active/README.md) |
@@ -28,7 +29,8 @@ pnpm · TypeScript · tsx · tsup · Vitest · Biome
 2. Prefer pure functions for parsing and output shaping; let `src/cli.ts` handle process wiring.
 3. Generated output belongs in `dist/` only. Never hand-edit built artifacts.
 4. Plans and design decisions live in the repo. If it matters, write it down under `plans/` or `docs/`.
-5. Run `pnpm lint && pnpm test && pnpm build` before considering work complete.
+5. Mock external API responses in tests, but exercise the full internal lifecycle around them: parse, orchestration, state changes, and output.
+6. Run `pnpm lint && pnpm test && pnpm coverage && pnpm build` before considering work complete.
 
 ## Before You Start a Task
 
@@ -38,6 +40,6 @@ pnpm · TypeScript · tsx · tsup · Vitest · Biome
 
 ## When You're Done
 
-1. Run `pnpm lint && pnpm test && pnpm build`.
+1. Run `pnpm lint && pnpm test && pnpm coverage && pnpm build`.
 2. Update [docs/quality.md](./docs/quality.md) if you improved coverage or fixed a known gap.
 3. Add or update a plan or design note if the change affects repo structure.

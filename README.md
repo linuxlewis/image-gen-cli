@@ -8,6 +8,7 @@ An agent-friendly TypeScript CLI scaffold using `pnpm`, `tsx`, `tsup`, `vitest`,
 pnpm install
 pnpm dev -- --help
 pnpm test
+pnpm coverage
 pnpm lint
 pnpm build
 ```
@@ -29,5 +30,6 @@ pnpm build
 - `pnpm lint`
 - `pnpm lint:fix`
 - `pnpm test`
+- `pnpm coverage`
 - `pnpm test:watch`
 - `pnpm format`

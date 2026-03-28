@@ -3,6 +3,7 @@
 ## Current State
 
 - CLI scaffold is in place with build, lint, typecheck, and unit test scripts.
+- Coverage can be calculated with `pnpm coverage`.
 - Help output and default output are covered by unit tests.
 
 ## Known Gaps
