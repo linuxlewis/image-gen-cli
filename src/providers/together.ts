@@ -4,6 +4,7 @@ import { HttpError, ProviderAuthError } from "../core/errors.js";
 import type { CanonicalModelId, ModelRoute } from "../core/types.js";
 import type { HttpClient } from "../http/client.js";
 import { createHttpClient } from "../http/client.js";
+import type { NormalizedOutputAsset } from "../io/outputs.js";
 import { getRouteForCanonicalModelIdAndProvider } from "../registry/routes.js";
 import type {
   ImageGenerationProvider,
@@ -81,6 +82,11 @@ function parseSize(size: ImageSize | undefined): { height: number; width: number
   }
 
   const [widthText, heightText] = size.split("x");
+
+  if (!widthText || !heightText) {
+    throw new Error(`Unsupported Together size "${size}".`);
+  }
+
   const width = Number.parseInt(widthText, 10);
   const height = Number.parseInt(heightText, 10);
 
@@ -144,7 +150,7 @@ export function normalizeTogetherImageGenerationResponse(
   route: ModelRoute,
   response: TogetherImageResponse,
 ): NormalizedProviderResult<TogetherImageResponse> {
-  const assets = (response.data ?? []).reduce<NormalizedProviderResult["assets"]>(
+  const assets = (response.data ?? []).reduce<NormalizedOutputAsset[]>(
     (normalizedAssets, asset, index) => {
       if (!asset.b64_json && !asset.url) {
         return normalizedAssets;
