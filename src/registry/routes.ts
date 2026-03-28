@@ -1,4 +1,5 @@
 import type { CanonicalModelId, ModelRoute, ProviderId } from "../core/types.js";
+import { GOOGLE_DIRECT_MODEL_SPECS } from "../providers/google/models.js";
 import { getProvider } from "./providers.js";
 
 type RouteInput = Omit<ModelRoute, "providerType">;
@@ -52,38 +53,16 @@ export const MODEL_ROUTES = [
     status: "preview",
     confidence: "high",
   }),
-  defineRoute({
-    canonicalModelId: "gemini-2.5-flash-image-preview",
-    provider: "google",
-    routeModelId: "gemini-2.5-flash-image-preview",
-    rawModelId: "gemini-2.5-flash-image-preview",
-    status: "preview",
-    confidence: "high",
-  }),
-  defineRoute({
-    canonicalModelId: "imagen-4-fast",
-    provider: "google",
-    routeModelId: "imagen-4.0-fast-generate-001",
-    rawModelId: "imagen-4.0-fast-generate-001",
-    status: "active",
-    confidence: "high",
-  }),
-  defineRoute({
-    canonicalModelId: "imagen-4",
-    provider: "google",
-    routeModelId: "imagen-4.0-generate-001",
-    rawModelId: "imagen-4.0-generate-001",
-    status: "active",
-    confidence: "high",
-  }),
-  defineRoute({
-    canonicalModelId: "imagen-4-ultra",
-    provider: "google",
-    routeModelId: "imagen-4.0-ultra-generate-001",
-    rawModelId: "imagen-4.0-ultra-generate-001",
-    status: "active",
-    confidence: "high",
-  }),
+  ...GOOGLE_DIRECT_MODEL_SPECS.map((spec) =>
+    defineRoute({
+      canonicalModelId: spec.canonicalModelId,
+      provider: "google",
+      routeModelId: spec.routeModelId,
+      rawModelId: spec.rawModelId,
+      status: spec.canonicalModelId === "gemini-2.5-flash-image-preview" ? "preview" : "active",
+      confidence: "high",
+    }),
+  ),
   defineRoute({
     canonicalModelId: "flux-1-schnell",
     provider: "together",

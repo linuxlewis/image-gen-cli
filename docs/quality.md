@@ -8,6 +8,7 @@
 - OpenAI direct-provider plumbing now covers supported-model detection, route-driven request mapping,
   auth/config failures, and normalized response shaping with raw response preservation.
 - Together provider support now covers FLUX route resolution, request translation, and normalized response handling.
+- Google direct provider coverage now includes canonical-to-raw model translation, request mapping, lazy Google auth failure, and normalized Gemini/Imagen result handling with raw response retention.
 - Coverage can be calculated with `pnpm coverage`.
 - Help output, documented `pnpm dev -- ...` pass-through invocation shapes, read-only discovery command output, shared env utilities, HTTP client helpers, and normalized output rendering are covered by unit tests.
 - Together FLUX provider tests exercise canonical-model route mapping, provider request translation, missing credential handling, auth error mapping, and normalized generate results.
