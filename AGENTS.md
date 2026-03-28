@@ -6,6 +6,7 @@ This is the map. Not the manual.
 
 This repository is a TypeScript CLI project using `pnpm`. It is intentionally small, but it follows
 agent-first repo conventions so the codebase can scale without losing structure.
+The CLI currently exposes discovery commands plus a route-backed `generate` command.
 
 ## Quick Navigation
 

@@ -1,12 +1,15 @@
+import { type GenerateCommandDependencies, runGenerateCommand } from "./commands/generate.js";
 import { renderModelsList } from "./commands/models-list.js";
 import { renderProvidersList } from "./commands/providers-list.js";
 import { renderRoutesList } from "./commands/routes-list.js";
-import { MODEL_FAMILIES, type ModelFamily, PROVIDER_IDS, type ProviderId } from "./core/types.js";
+import { MODEL_FAMILIES, PROVIDER_IDS } from "./core/types.js";
 
 type CliResult = {
   exitCode: number;
   lines: string[];
 };
+
+export type CliDependencies = GenerateCommandDependencies;
 
 function normalizeArgs(args: readonly string[]): string[] {
   if (args[0] !== "--") {
@@ -28,12 +31,14 @@ function renderHelp(): string[] {
     "  image-gen-cli providers list",
     "  image-gen-cli models list [--family <family>] [--provider <provider>]",
     "  image-gen-cli routes list --model <model> [--provider <provider>]",
+    "  image-gen-cli generate --model <model> --prompt <prompt> [--provider <provider>]",
     "",
     "Options:",
     "  -h, --help             Show this help message",
     `  --family <family>      Filter models by family (${MODEL_FAMILIES.join(", ")})`,
     `  --provider <provider>  Filter by provider (${PROVIDER_IDS.join(", ")})`,
     "  --model <model>        Select a canonical model id or alias for route lookup",
+    "  --prompt <prompt>      Text prompt for image generation",
   ];
 }
 
@@ -118,7 +123,52 @@ function parseRoutesList(args: readonly string[]): CliResult {
   };
 }
 
-function resolveCliResult(args: string[]): CliResult {
+async function parseGenerate(
+  args: readonly string[],
+  dependencies: CliDependencies,
+): Promise<CliResult> {
+  const model = readFlagValue(args, "--model");
+  const prompt = readFlagValue(args, "--prompt");
+  const providerValue = readFlagValue(args, "--provider");
+  const provider = findAllowedValue(PROVIDER_IDS, providerValue);
+
+  if (!model) {
+    return {
+      exitCode: 1,
+      lines: ["Missing required flag: --model"],
+    };
+  }
+
+  if (!prompt) {
+    return {
+      exitCode: 1,
+      lines: ["Missing required flag: --prompt"],
+    };
+  }
+
+  if (providerValue && !provider) {
+    return invalidProviderResult(providerValue);
+  }
+
+  const result = await runGenerateCommand(
+    {
+      model,
+      prompt,
+      ...(provider ? { provider } : {}),
+    },
+    dependencies,
+  );
+
+  return {
+    exitCode: result.ok ? 0 : 1,
+    lines: result.lines,
+  };
+}
+
+async function resolveCliResult(
+  args: string[],
+  dependencies: CliDependencies = {},
+): Promise<CliResult> {
   const normalizedArgs = normalizeArgs(args);
 
   if (
@@ -149,18 +199,25 @@ function resolveCliResult(args: string[]): CliResult {
     return parseRoutesList(rest);
   }
 
+  if (group === "generate") {
+    return parseGenerate(normalizedArgs.slice(1), dependencies);
+  }
+
   return {
     exitCode: 1,
     lines: [`Unknown command: ${normalizedArgs.join(" ")}`, "", ...renderHelp()],
   };
 }
 
-export function renderCliOutput(args: string[]): string[] {
-  return resolveCliResult(args).lines;
+export async function renderCliOutput(
+  args: string[],
+  dependencies: CliDependencies = {},
+): Promise<string[]> {
+  return (await resolveCliResult(args, dependencies)).lines;
 }
 
-export function runCli(args: string[]): number {
-  const result = resolveCliResult(args);
+export async function runCli(args: string[], dependencies: CliDependencies = {}): Promise<number> {
+  const result = await resolveCliResult(args, dependencies);
 
   for (const line of result.lines) {
     console.log(line);
