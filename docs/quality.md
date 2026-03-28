@@ -7,8 +7,10 @@
 - Shared provider plumbing now covers lazy env lookup, HTTP error normalization, and output rendering helpers.
 - OpenAI direct-provider plumbing now covers supported-model detection, route-driven request mapping,
   auth/config failures, and normalized response shaping with raw response preservation.
+- Together provider support now covers FLUX route resolution, request translation, and normalized response handling.
 - Coverage can be calculated with `pnpm coverage`.
 - Help output, documented `pnpm dev -- ...` pass-through invocation shapes, read-only discovery command output, shared env utilities, HTTP client helpers, and normalized output rendering are covered by unit tests.
+- Together FLUX provider tests exercise canonical-model route mapping, provider request translation, missing credential handling, auth error mapping, and normalized generate results.
 - HTTP client regression coverage now includes raw byte payload passthrough so binary request bodies are not JSON-normalized.
 
 ## Known Gaps
