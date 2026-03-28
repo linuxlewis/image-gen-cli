@@ -3,6 +3,8 @@
 ## Current State
 
 - CLI scaffold is in place with build, lint, typecheck, and unit test scripts.
+- Repo docs now describe the actual MVP surface: discovery commands, route-backed `generate`,
+  supported providers, env vars, output modes, and the module ownership needed for agent handoff.
 - Hand-authored registry primitives now cover canonical model, provider, route lookup, and alias resolution behavior.
 - Shared provider plumbing now covers lazy env lookup, HTTP error normalization, and output rendering helpers.
 - OpenAI direct-provider plumbing now covers supported-model detection, route-driven request mapping,
@@ -21,3 +23,4 @@
 
 - No integration tests that execute the built binary.
 - No release or publish workflow yet.
+- Registry metadata lives in code and tests first; there is still no generated doc snapshot of aliases and per-route notes.

@@ -1,5 +1,6 @@
 # Documentation Catalog
 
+- [../README.md](../README.md): current public CLI overview and examples
 - [../AGENTS.md](../AGENTS.md): entrypoint for agents
 - [../ARCHITECTURE.md](../ARCHITECTURE.md): repo structure and dependency rules
 - [model-registry-principles.md](./model-registry-principles.md): canonical model and provider routing rules
