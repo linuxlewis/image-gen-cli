@@ -11,6 +11,7 @@ export type NormalizedCommandOutput = {
   assets: readonly NormalizedOutputAsset[];
   model: string;
   provider: ProviderId;
+  providerMetadata?: Record<string, unknown>;
   revisedPrompt?: string;
   warnings?: readonly string[];
 };

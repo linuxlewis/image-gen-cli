@@ -15,11 +15,11 @@ describe("renderModelsList", () => {
       "imagen-4-fast                   imagen        Google             active   high        google",
       "imagen-4                        imagen        Google             active   high        google",
       "imagen-4-ultra                  imagen        Google             active   high        google",
-      "flux-1-schnell                  flux          Black Forest Labs  active   medium      together",
-      "flux-1-kontext-pro              flux          Black Forest Labs  preview  medium      together",
-      "flux-2-pro                      flux          Black Forest Labs  preview  low         together",
-      "flux-2-dev                      flux          Black Forest Labs  preview  low         together",
-      "flux-2-flex                     flux          Black Forest Labs  preview  low         together",
+      "flux-1-schnell                  flux          Black Forest Labs  active   medium      together, replicate",
+      "flux-1-kontext-pro              flux          Black Forest Labs  preview  medium      together, replicate",
+      "flux-2-pro                      flux          Black Forest Labs  preview  low         together, replicate",
+      "flux-2-dev                      flux          Black Forest Labs  preview  low         together, replicate",
+      "flux-2-flex                     flux          Black Forest Labs  preview  low         together, replicate",
       "kling-v1                        kling         Kling              preview  medium      replicate",
     ]);
   });
@@ -29,11 +29,11 @@ describe("renderModelsList", () => {
       "Models",
       "",
       "Canonical Model ID  Family  Vendor             Status   Confidence  Providers",
-      "flux-1-schnell      flux    Black Forest Labs  active   medium      together",
-      "flux-1-kontext-pro  flux    Black Forest Labs  preview  medium      together",
-      "flux-2-pro          flux    Black Forest Labs  preview  low         together",
-      "flux-2-dev          flux    Black Forest Labs  preview  low         together",
-      "flux-2-flex         flux    Black Forest Labs  preview  low         together",
+      "flux-1-schnell      flux    Black Forest Labs  active   medium      together, replicate",
+      "flux-1-kontext-pro  flux    Black Forest Labs  preview  medium      together, replicate",
+      "flux-2-pro          flux    Black Forest Labs  preview  low         together, replicate",
+      "flux-2-dev          flux    Black Forest Labs  preview  low         together, replicate",
+      "flux-2-flex         flux    Black Forest Labs  preview  low         together, replicate",
     ]);
   });
 

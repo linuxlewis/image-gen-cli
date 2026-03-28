@@ -12,6 +12,7 @@
 - Help output, documented `pnpm dev -- ...` pass-through invocation shapes, read-only discovery command output, shared env utilities, HTTP client helpers, and normalized output rendering are covered by unit tests.
 - Together FLUX provider tests exercise canonical-model route mapping, provider request translation, missing credential handling, auth error mapping, and normalized generate results.
 - HTTP client regression coverage now includes raw byte payload passthrough so binary request bodies are not JSON-normalized.
+- Replicate provider coverage now exercises supported-route detection, request translation, async prediction polling, auth gating, terminal failure handling, and normalized output metadata shaping.
 
 ## Known Gaps
 

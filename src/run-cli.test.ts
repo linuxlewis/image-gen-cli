@@ -51,11 +51,11 @@ describe("renderCliOutput", () => {
       "Models",
       "",
       "Canonical Model ID  Family  Vendor             Status   Confidence  Providers",
-      "flux-1-schnell      flux    Black Forest Labs  active   medium      together",
-      "flux-1-kontext-pro  flux    Black Forest Labs  preview  medium      together",
-      "flux-2-pro          flux    Black Forest Labs  preview  low         together",
-      "flux-2-dev          flux    Black Forest Labs  preview  low         together",
-      "flux-2-flex         flux    Black Forest Labs  preview  low         together",
+      "flux-1-schnell      flux    Black Forest Labs  active   medium      together, replicate",
+      "flux-1-kontext-pro  flux    Black Forest Labs  preview  medium      together, replicate",
+      "flux-2-pro          flux    Black Forest Labs  preview  low         together, replicate",
+      "flux-2-dev          flux    Black Forest Labs  preview  low         together, replicate",
+      "flux-2-flex         flux    Black Forest Labs  preview  low         together, replicate",
     ]);
   });
 
@@ -75,8 +75,9 @@ describe("renderCliOutput", () => {
     expect(renderCliOutput(["routes", "list", "--model", "flux-2-pro"])).toEqual([
       "Routes for flux-2-pro",
       "",
-      "Provider  Type        Route Model ID                Raw Model ID  Status   Confidence",
-      "together  aggregated  black-forest-labs/FLUX.2-pro  FLUX.2-pro    preview  low",
+      "Provider   Type        Route Model ID                Raw Model ID  Status   Confidence",
+      "together   aggregated  black-forest-labs/FLUX.2-pro  FLUX.2-pro    preview  low",
+      "replicate  aggregated  black-forest-labs/flux-2-pro  flux-2-pro    preview  low",
     ]);
   });
 

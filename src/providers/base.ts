@@ -18,6 +18,10 @@ export const IMAGE_BACKGROUNDS = ["transparent", "opaque"] as const;
 export type ImageBackground = (typeof IMAGE_BACKGROUNDS)[number];
 
 export type ProviderImageGenerationRequest = {
+  aspectRatio?: string;
+  durationSeconds?: number;
+  inputImage?: string;
+  negativePrompt?: string;
   canonicalModelId: CanonicalModelId;
   prompt: string;
   background?: ImageBackground;
@@ -25,6 +29,7 @@ export type ProviderImageGenerationRequest = {
   outputCompression?: number;
   outputFormat?: ImageOutputFormat;
   quality?: ImageQuality;
+  seed?: number;
   size?: ImageSize;
   user?: string;
 };

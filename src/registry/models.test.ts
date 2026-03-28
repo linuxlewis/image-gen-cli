@@ -42,17 +42,31 @@ describe("model registry", () => {
   it("filters models by provider", () => {
     expect(
       listCanonicalModels({ provider: "replicate" }).map((model) => model.canonicalModelId),
-    ).toEqual(["kling-v1"]);
+    ).toEqual([
+      "flux-1-schnell",
+      "flux-1-kontext-pro",
+      "flux-2-pro",
+      "flux-2-dev",
+      "flux-2-flex",
+      "kling-v1",
+    ]);
   });
 
   it("resolves routes from an alias lookup", () => {
-    expect(getRoutesForModel("flux-pro")).toEqual([
-      expect.objectContaining({
-        canonicalModelId: "flux-2-pro",
-        provider: "together",
-        routeModelId: "black-forest-labs/FLUX.2-pro",
-      }),
-    ]);
+    expect(getRoutesForModel("flux-pro")).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          canonicalModelId: "flux-2-pro",
+          provider: "together",
+          routeModelId: "black-forest-labs/FLUX.2-pro",
+        }),
+        expect.objectContaining({
+          canonicalModelId: "flux-2-pro",
+          provider: "replicate",
+          routeModelId: "black-forest-labs/flux-2-pro",
+        }),
+      ]),
+    );
   });
 
   it("looks up a single route for a canonical model and provider", () => {
@@ -60,8 +74,8 @@ describe("model registry", () => {
       expect.objectContaining({
         canonicalModelId: "kling-v1",
         provider: "replicate",
-        routeModelId: "kwaivgi/kling-v1",
-        rawModelId: "kling-v1",
+        routeModelId: "kwaivgi/kling-v1.5-standard",
+        rawModelId: "kling-v1.5-standard",
       }),
     );
   });

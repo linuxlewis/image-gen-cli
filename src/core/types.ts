@@ -48,6 +48,7 @@ export type ModelRoute = {
   providerType: ProviderType;
   routeModelId: string;
   rawModelId?: string;
+  versionId?: string;
   status: RegistryStatus;
   confidence: RegistryConfidence;
   notes?: string;

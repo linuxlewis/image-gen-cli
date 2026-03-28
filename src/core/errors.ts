@@ -5,7 +5,11 @@ export type AppErrorCode =
   | "CONFIG_ENV_INVALID"
   | "PROVIDER_AUTH_ERROR"
   | "HTTP_ERROR"
-  | "HTTP_NETWORK_ERROR";
+  | "HTTP_NETWORK_ERROR"
+  | "PROVIDER_UNSUPPORTED_MODEL"
+  | "PROVIDER_INVALID_REQUEST"
+  | "PROVIDER_INVALID_RESPONSE"
+  | "PROVIDER_PREDICTION_FAILED";
 
 export type AppErrorOptions = {
   cause?: unknown;
@@ -25,6 +29,7 @@ export class AppError extends Error {
 }
 
 export class ConfigError extends AppError {}
+export class ProviderError extends AppError {}
 
 export class ProviderAuthError extends AppError {
   readonly provider: ProviderId;

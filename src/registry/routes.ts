@@ -2,15 +2,29 @@ import type { CanonicalModelId, ModelRoute, ProviderId } from "../core/types.js"
 import { getProvider } from "./providers.js";
 
 type RouteInput = Omit<ModelRoute, "providerType">;
+type ReplicateFluxRouteInput = Pick<
+  RouteInput,
+  "canonicalModelId" | "routeModelId" | "rawModelId" | "status" | "confidence"
+>;
 
 const INFERRED_TOGETHER_FLUX_NOTE =
   "Route naming is inferred from vendor lineage and should be verified against provider docs.";
+const REPLICATE_FLUX_NOTE =
+  "Replicate route slug is provider-specific metadata and remains separate from the canonical model id.";
 
 function defineRoute(route: RouteInput): ModelRoute {
   return {
     ...route,
     providerType: getProvider(route.provider).type,
   };
+}
+
+function defineReplicateFluxRoute(route: ReplicateFluxRouteInput): ModelRoute {
+  return defineRoute({
+    ...route,
+    provider: "replicate",
+    notes: REPLICATE_FLUX_NOTE,
+  });
 }
 
 export const MODEL_ROUTES = [
@@ -78,11 +92,25 @@ export const MODEL_ROUTES = [
     status: "active",
     confidence: "medium",
   }),
+  defineReplicateFluxRoute({
+    canonicalModelId: "flux-1-schnell",
+    routeModelId: "black-forest-labs/flux-schnell",
+    rawModelId: "flux-schnell",
+    status: "active",
+    confidence: "medium",
+  }),
   defineRoute({
     canonicalModelId: "flux-1-kontext-pro",
     provider: "together",
     routeModelId: "black-forest-labs/FLUX.1-kontext-pro",
     rawModelId: "FLUX.1-kontext-pro",
+    status: "preview",
+    confidence: "medium",
+  }),
+  defineReplicateFluxRoute({
+    canonicalModelId: "flux-1-kontext-pro",
+    routeModelId: "black-forest-labs/flux-kontext-pro",
+    rawModelId: "flux-kontext-pro",
     status: "preview",
     confidence: "medium",
   }),
@@ -95,6 +123,13 @@ export const MODEL_ROUTES = [
     confidence: "low",
     notes: INFERRED_TOGETHER_FLUX_NOTE,
   }),
+  defineReplicateFluxRoute({
+    canonicalModelId: "flux-2-pro",
+    routeModelId: "black-forest-labs/flux-2-pro",
+    rawModelId: "flux-2-pro",
+    status: "preview",
+    confidence: "low",
+  }),
   defineRoute({
     canonicalModelId: "flux-2-dev",
     provider: "together",
@@ -103,6 +138,13 @@ export const MODEL_ROUTES = [
     status: "preview",
     confidence: "low",
     notes: INFERRED_TOGETHER_FLUX_NOTE,
+  }),
+  defineReplicateFluxRoute({
+    canonicalModelId: "flux-2-dev",
+    routeModelId: "black-forest-labs/flux-2-dev",
+    rawModelId: "flux-2-dev",
+    status: "preview",
+    confidence: "low",
   }),
   defineRoute({
     canonicalModelId: "flux-2-flex",
@@ -113,14 +155,22 @@ export const MODEL_ROUTES = [
     confidence: "low",
     notes: INFERRED_TOGETHER_FLUX_NOTE,
   }),
+  defineReplicateFluxRoute({
+    canonicalModelId: "flux-2-flex",
+    routeModelId: "black-forest-labs/flux-2-flex",
+    rawModelId: "flux-2-flex",
+    status: "preview",
+    confidence: "low",
+  }),
   defineRoute({
     canonicalModelId: "kling-v1",
     provider: "replicate",
-    routeModelId: "kwaivgi/kling-v1",
-    rawModelId: "kling-v1",
+    routeModelId: "kwaivgi/kling-v1.5-standard",
+    rawModelId: "kling-v1.5-standard",
     status: "preview",
     confidence: "medium",
-    notes: "Replicate route keeps the provider slug separate from the canonical model id.",
+    notes:
+      "Replicate currently exposes kling-v1.5-standard for this route; the canonical model id stays provider-neutral.",
   }),
 ] as const satisfies readonly ModelRoute[];
 
