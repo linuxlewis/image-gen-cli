@@ -16,6 +16,7 @@ with text, JSON, and file-save output modes.
 | User-facing command overview | [README.md](./README.md) |
 | Code organization and dependency rules | [ARCHITECTURE.md](./ARCHITECTURE.md) |
 | Model registry rules | [docs/model-registry-principles.md](./docs/model-registry-principles.md) |
+| Installable skill for using the CLI | [skills/image-gen-cli/SKILL.md](./skills/image-gen-cli/SKILL.md) |
 | Documentation catalog | [docs/catalog.md](./docs/catalog.md) |
 | Testing guidance | [docs/testing.md](./docs/testing.md) |
 | Quality notes and gaps | [docs/quality.md](./docs/quality.md) |

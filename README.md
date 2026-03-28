@@ -28,6 +28,7 @@ to a provider route.
 
 - `AGENTS.md`: first stop for agents working in the repo
 - `ARCHITECTURE.md`: code organization and dependency rules
+- `skills/image-gen-cli/SKILL.md`: installable agent skill for using this CLI
 - `docs/model-registry-principles.md`: source of truth for canonical model IDs and provider routes
 - `docs/`: documentation, quality notes, and design records
 - `plans/`: active and completed work plans
@@ -55,6 +56,30 @@ After build:
 pnpm build
 pnpm start -- --help
 ```
+
+## Agent Skill
+
+The repo ships an installable skill at `skills/image-gen-cli/SKILL.md` for agents that need
+canonical model discovery, route inspection, or `generate` usage without reopening the broader repo
+docs.
+
+Validated local workflow:
+
+```bash
+python3 /home/sbolgert/.npm-global/lib/node_modules/openclaw/skills/skill-creator/scripts/package_skill.py \
+  skills/image-gen-cli \
+  dist/skill-packages
+
+/home/sbolgert/.npm-global/lib/node_modules/openclaw/dist/extensions/acpx/node_modules/.bin/skillflag install \
+  skills/image-gen-cli \
+  --agent codex \
+  --scope cwd \
+  --force
+```
+
+The packaging command writes a distributable archive under `dist/skill-packages/`. The install
+command validates non-interactive Codex installation from the raw skill directory in the current
+working tree.
 
 ## Commands
 
