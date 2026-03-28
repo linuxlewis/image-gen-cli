@@ -379,12 +379,12 @@ export function createReplicateProvider(options: ReplicateProviderOptions = {}):
         ...(options.maxPollAttempts === undefined
           ? {}
           : { maxPollAttempts: options.maxPollAttempts }),
-        ...(invocationOptions.pollIntervalMs ?? options.pollIntervalMs) === undefined
+        ...((invocationOptions.pollIntervalMs ?? options.pollIntervalMs) === undefined
           ? {}
-          : { pollIntervalMs: invocationOptions.pollIntervalMs ?? options.pollIntervalMs },
-        ...(invocationOptions.sleep ?? options.sleep) === undefined
+          : { pollIntervalMs: invocationOptions.pollIntervalMs ?? options.pollIntervalMs }),
+        ...((invocationOptions.sleep ?? options.sleep) === undefined
           ? {}
-          : { sleep: invocationOptions.sleep ?? options.sleep },
+          : { sleep: invocationOptions.sleep ?? options.sleep }),
       });
 
       if (terminalPrediction.status !== "succeeded") {
