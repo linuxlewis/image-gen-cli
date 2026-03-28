@@ -263,18 +263,21 @@ function normalizeGoogleGenerateContentResponse(
   for (const candidate of response.candidates ?? []) {
     for (const part of candidate.content?.parts ?? []) {
       const inlineData = part.inlineData ?? part.inline_data;
-      const inlineDataMimeType =
-        part.inlineData?.mimeType ?? part.inline_data?.mimeType ?? part.inline_data?.mime_type;
+      const text = part.text?.trim();
 
       if (inlineData?.data) {
         assets.push({
           base64Data: inlineData.data,
-          mimeType: inlineDataMimeType ?? "image/png",
+          mimeType:
+            part.inlineData?.mimeType ??
+            part.inline_data?.mimeType ??
+            part.inline_data?.mime_type ??
+            "image/png",
         });
       }
 
-      if (part.text?.trim()) {
-        textResponses.push(part.text.trim());
+      if (text) {
+        textResponses.push(text);
       }
     }
   }
