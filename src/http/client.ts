@@ -24,6 +24,19 @@ export type CreateHttpClientOptions = {
   fetchFn?: FetchLike;
 };
 
+function isJsonBody(value: HttpJsonRequestOptions["body"]): value is JsonBody {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !(value instanceof ArrayBuffer) &&
+    !ArrayBuffer.isView(value) &&
+    !(value instanceof Blob) &&
+    !(value instanceof FormData) &&
+    !(value instanceof URLSearchParams) &&
+    !(value instanceof ReadableStream)
+  );
+}
+
 export function createHttpClient(options: CreateHttpClientOptions = {}): HttpClient {
   const fetchFn = options.fetchFn ?? fetch;
 
@@ -78,17 +91,7 @@ export function createHttpClient(options: CreateHttpClientOptions = {}): HttpCli
   ): Promise<T> {
     const { body, ...rest } = init;
 
-    const shouldSerializeJsonBody =
-      typeof body === "object" &&
-      body !== null &&
-      !(body instanceof ArrayBuffer) &&
-      !ArrayBuffer.isView(body) &&
-      !(body instanceof Blob) &&
-      !(body instanceof FormData) &&
-      !(body instanceof URLSearchParams) &&
-      !(body instanceof ReadableStream);
-
-    if (!shouldSerializeJsonBody) {
+    if (!isJsonBody(body)) {
       const response = await request(input, {
         ...rest,
         ...(body === undefined ? {} : { body }),
@@ -105,7 +108,7 @@ export function createHttpClient(options: CreateHttpClientOptions = {}): HttpCli
 
     const response = await request(input, {
       ...rest,
-      body: JSON.stringify(body satisfies JsonBody),
+      body: JSON.stringify(body),
       headers,
     });
 
