@@ -1,0 +1,34 @@
+{
+  "name": "image-gen-cli",
+  "version": "0.0.0",
+  "private": true,
+  "description": "A TypeScript CLI project.",
+  "type": "module",
+  "packageManager": "pnpm@10.30.2",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "bin": {
+    "image-gen-cli": "./dist/cli.cjs"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "check": "tsc --noEmit",
+    "dev": "tsx src/cli.ts",
+    "format": "biome format --write .",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "start": "node ./dist/cli.cjs",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/node": "^24.5.2",
+    "tsup": "^8.5.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "vitest": "^2.1.9"
+  }
+}
