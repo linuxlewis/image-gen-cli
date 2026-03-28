@@ -269,4 +269,45 @@ describe("google direct provider adapter", () => {
       new Headers(firstCall?.[1] ? firstCall[1].headers : undefined).get("x-goog-api-key"),
     ).toBe("google-key");
   });
+
+  it("maps shared provider fields into Google request options during execution", async () => {
+    const fetchFn = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            predictions: [{ bytesBase64Encoded: "generated-image" }],
+          }),
+          {
+            headers: { "content-type": "application/json" },
+            status: 200,
+          },
+        ),
+    );
+
+    const provider = createGoogleProvider({
+      env: { GOOGLE_API_KEY: "google-key" },
+      httpClient: createHttpClient({ fetchFn }),
+    });
+
+    await provider.generateImage({
+      aspectRatio: "16:9",
+      canonicalModelId: "imagen-4-fast",
+      imageCount: 2,
+      outputFormat: "jpeg",
+      prompt: "A product photo of a glass bottle",
+    });
+
+    const firstCall = fetchFn.mock.calls[0] as [unknown, RequestInit | undefined] | undefined;
+    expect(firstCall).toBeDefined();
+    expect(firstCall?.[1]?.body).toBe(
+      JSON.stringify({
+        instances: [{ prompt: "A product photo of a glass bottle" }],
+        parameters: {
+          aspectRatio: "16:9",
+          outputMimeType: "image/jpeg",
+          sampleCount: 2,
+        },
+      }),
+    );
+  });
 });

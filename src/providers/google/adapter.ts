@@ -236,14 +236,15 @@ export function createGoogleProvider(options: CreateGoogleProviderOptions = {}):
 
   return {
     async generateImage(input) {
+      const googleInput = toGoogleGenerateImageInput(input);
       const apiKey = requireProviderApiKey("google", options.env);
-      const request = buildGoogleGenerateRequest(input, apiKey, options.apiBaseUrl);
+      const request = buildGoogleGenerateRequest(googleInput, apiKey, options.apiBaseUrl);
       const response = await httpClient.requestJson<GoogleGenerateResponse>(
         request.url,
         request.requestInit,
       );
 
-      return normalizeGoogleGenerateResponse(input, response);
+      return normalizeGoogleGenerateResponse(googleInput, response);
     },
     id: "google",
     supportsCanonicalModel(canonicalModelId) {
@@ -378,6 +379,18 @@ function compactRecord<T extends Record<string, unknown>>(record: T): Partial<T>
   ) as Partial<T>;
 }
 
+function toGoogleGenerateImageInput(
+  input: ProviderImageGenerationRequest,
+): GoogleGenerateImageInput {
+  return {
+    canonicalModelId: input.canonicalModelId,
+    prompt: input.prompt,
+    ...(isGoogleImagenAspectRatio(input.aspectRatio) ? { aspectRatio: input.aspectRatio } : {}),
+    ...(input.imageCount !== undefined ? { numberOfImages: input.imageCount } : {}),
+    ...(input.outputFormat ? { outputMimeType: `image/${input.outputFormat}` } : {}),
+  };
+}
+
 function requireGoogleDirectModel(canonicalModelId: CanonicalModelId) {
   const model = getGoogleDirectModelSpec(canonicalModelId);
 
@@ -402,5 +415,11 @@ function isGooglePredictResponse(
 ): response is GooglePredictResponse {
   return (
     "generatedImages" in response || "generated_images" in response || "predictions" in response
+  );
+}
+
+function isGoogleImagenAspectRatio(value: string | undefined): value is GoogleImagenAspectRatio {
+  return (
+    value !== undefined && GOOGLE_IMAGEN_ASPECT_RATIOS.includes(value as GoogleImagenAspectRatio)
   );
 }
