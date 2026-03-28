@@ -8,6 +8,20 @@ type CliResult = {
   lines: string[];
 };
 
+function normalizeArgs(args: readonly string[]): string[] {
+  if (args[0] !== "--") {
+    return [...args];
+  }
+
+  let firstCommandIndex = 0;
+
+  while (args[firstCommandIndex] === "--") {
+    firstCommandIndex += 1;
+  }
+
+  return args.slice(firstCommandIndex);
+}
+
 function renderHelp(): string[] {
   return [
     "Usage:",
@@ -105,14 +119,20 @@ function parseRoutesList(args: readonly string[]): CliResult {
 }
 
 function resolveCliResult(args: string[]): CliResult {
-  if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
+  const normalizedArgs = normalizeArgs(args);
+
+  if (
+    normalizedArgs.length === 0 ||
+    normalizedArgs.includes("--help") ||
+    normalizedArgs.includes("-h")
+  ) {
     return {
       exitCode: 0,
       lines: renderHelp(),
     };
   }
 
-  const [group, command, ...rest] = args;
+  const [group, command, ...rest] = normalizedArgs;
 
   if (group === "providers" && command === "list") {
     return {
@@ -131,7 +151,7 @@ function resolveCliResult(args: string[]): CliResult {
 
   return {
     exitCode: 1,
-    lines: [`Unknown command: ${args.join(" ")}`, "", ...renderHelp()],
+    lines: [`Unknown command: ${normalizedArgs.join(" ")}`, "", ...renderHelp()],
   };
 }
 

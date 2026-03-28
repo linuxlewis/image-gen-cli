@@ -34,6 +34,18 @@ describe("renderCliOutput", () => {
     ]);
   });
 
+  it("strips a leading pnpm pass-through sentinel before parsing commands", () => {
+    expect(renderCliOutput(["--", "providers", "list"])).toEqual([
+      "Providers",
+      "",
+      "Provider   Type        Name",
+      "openai     direct      OpenAI",
+      "google     direct      Google",
+      "together   aggregated  Together",
+      "replicate  aggregated  Replicate",
+    ]);
+  });
+
   it("renders models list with a family filter", () => {
     expect(renderCliOutput(["models", "list", "--family", "flux"])).toEqual([
       "Models",
@@ -112,5 +124,11 @@ describe("runCli", () => {
     expect(runCli(["providers", "list"])).toBe(0);
     expect(runCli(["models", "list"])).toBe(0);
     expect(runCli(["routes", "list", "--model", "flux-2-pro"])).toBe(0);
+  });
+
+  it("returns zero for supported discovery commands when argv includes pnpm pass-through", () => {
+    expect(runCli(["--", "providers", "list"])).toBe(0);
+    expect(runCli(["--", "models", "list"])).toBe(0);
+    expect(runCli(["--", "routes", "list", "--model", "flux-2-pro"])).toBe(0);
   });
 });
