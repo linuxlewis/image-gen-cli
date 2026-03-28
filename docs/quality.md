@@ -14,6 +14,7 @@
 - Together FLUX provider tests exercise canonical-model route mapping, provider request translation, missing credential handling, auth error mapping, and normalized generate results.
 - HTTP client regression coverage now includes raw byte payload passthrough so binary request bodies are not JSON-normalized.
 - Replicate provider coverage now exercises supported-route detection, request translation, async prediction polling, auth gating, terminal failure handling, and normalized output metadata shaping.
+- Generate command coverage now exercises canonical model lookup, single-route auto-selection, ambiguous-route failures, provider-specific route selection, provider config errors, and CLI wiring through `run-cli.ts`.
 
 ## Known Gaps
 

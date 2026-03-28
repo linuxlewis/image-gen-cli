@@ -28,6 +28,7 @@ pnpm build
 - `pnpm dev -- providers list`
 - `pnpm dev -- models list --family flux`
 - `pnpm dev -- routes list --model flux-2-pro`
+- `pnpm dev -- generate --model imagen-4-fast --prompt "A studio product shot"`
 - `pnpm build`
 - `pnpm start --help`
 - `pnpm check`
@@ -66,3 +67,21 @@ filters:
 
 - `--model <model>`
 - `--provider <provider>`
+
+## Generate Command
+
+`generate` resolves a canonical model id to one provider route, runs the selected provider adapter,
+and prints normalized output metadata for the generated assets.
+
+```bash
+pnpm dev -- generate --model imagen-4-fast --prompt "A studio product shot"
+pnpm dev -- generate --model gpt-image-1 --prompt "A studio product shot"
+pnpm dev -- generate --model flux-2-pro --provider together --prompt "A studio product shot"
+```
+
+Rules:
+
+- `--model <model>` is required and accepts canonical ids or aliases
+- `--prompt <prompt>` is required
+- `--provider <provider>` is optional when the model has exactly one route
+- `--provider <provider>` is required when the model resolves to multiple routes
