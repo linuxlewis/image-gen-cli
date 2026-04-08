@@ -1,3 +1,7 @@
+import { mkdtemp, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ImageGenerationProvider, NormalizedProviderResult } from "./providers/base.js";
@@ -31,16 +35,30 @@ describe("renderCliOutput", () => {
       "  image-gen-cli providers list",
       "  image-gen-cli models list [--family <family>] [--provider <provider>]",
       "  image-gen-cli routes list --model <model> [--provider <provider>]",
-      "  image-gen-cli generate --model <model> --prompt <prompt> [--provider <provider>] [--json] [--output-dir <dir>]",
+      "  image-gen-cli generate --model <model> (--prompt <prompt> | --bulk-prompts <file>) [--provider <provider>] [--json] [--output-dir <dir>]",
       "",
       "Options:",
-      "  -h, --help             Show this help message",
-      "  --family <family>      Filter models by family (gpt-image, gemini-image, imagen, flux, kling)",
-      "  --json                 Render deterministic JSON for generate output",
-      "  --provider <provider>  Filter by provider (openai, google, together, replicate)",
-      "  --model <model>        Select a canonical model id or alias for route lookup",
-      "  --output-dir <dir>     Save generated assets under the target directory",
-      "  --prompt <prompt>      Text prompt for image generation",
+      "  -h, --help                  Show this help message",
+      "  --aspect-ratio <ratio>      Provider-specific aspect ratio value",
+      "  --background <background>   Background mode for supported providers (transparent, opaque)",
+      "  --bulk-prompts <file>       Newline-delimited prompts file for bulk generate mode",
+      "  --concurrency <n>           Maximum in-flight bulk generate requests",
+      "  --duration-seconds <n>      Video duration for supported models",
+      "  --family <family>           Filter models by family (gpt-image, gemini-image, imagen, flux, kling)",
+      "  --format <format>           Output format for supported providers (png, jpeg, webp)",
+      "  --image-count <n>           Number of images to request when supported",
+      "  --input-image <value>       Input image URL or path for supported providers",
+      "  --json                      Render deterministic JSON for generate output",
+      "  --model <model>             Select a canonical model id or alias for route lookup",
+      "  --negative-prompt <text>    Negative prompt for supported providers",
+      "  --output-compression <n>    Output compression/quality setting for supported providers",
+      "  --output-dir <dir>          Save generated assets under the target directory",
+      "  --provider <provider>       Filter by provider (openai, google, together, replicate)",
+      "  --prompt <prompt>           Text prompt for single generate mode",
+      "  --quality <quality>         Requested quality for supported providers (auto, low, medium, high)",
+      "  --seed <n>                  Random seed for supported providers",
+      "  --size <size>               Output size for supported providers (auto, 1024x1024, 1024x1536, 1536x1024)",
+      "  --user <value>              User identifier for supported providers",
     ]);
   });
 
@@ -156,6 +174,78 @@ describe("renderCliOutput", () => {
       "}",
     ]);
   });
+
+  it("renders bulk generate JSON output through the command wiring", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "image-gen-cli-run-cli-"));
+    const promptsFile = join(directory, "prompts.txt");
+
+    await writeFile(promptsFile, "First prompt\nSecond prompt\n");
+
+    await expect(
+      renderCliOutput(
+        [
+          "generate",
+          "--model",
+          "imagen-4-fast",
+          "--bulk-prompts",
+          promptsFile,
+          "--concurrency",
+          "2",
+          "--format",
+          "png",
+          "--json",
+        ],
+        { createProvider: createGenerateProviderMock },
+      ),
+    ).resolves.toEqual([
+      "{",
+      '  "concurrency": 2,',
+      '  "failed": 0,',
+      '  "results": [',
+      "    {",
+      '      "index": 1,',
+      '      "ok": true,',
+      '      "prompt": "First prompt",',
+      '      "result": {',
+      '        "canonicalModel": "imagen-4-fast",',
+      '        "outputs": [',
+      "          {",
+      '            "filename": "imagen-4-fast.png",',
+      '            "mimeType": "image/png"',
+      "          }",
+      "        ],",
+      '        "provider": "google",',
+      '        "providerModel": "mock-route",',
+      '        "rawResponse": {',
+      '          "ok": true',
+      "        }",
+      "      }",
+      "    },",
+      "    {",
+      '      "index": 2,',
+      '      "ok": true,',
+      '      "prompt": "Second prompt",',
+      '      "result": {',
+      '        "canonicalModel": "imagen-4-fast",',
+      '        "outputs": [',
+      "          {",
+      '            "filename": "imagen-4-fast.png",',
+      '            "mimeType": "image/png"',
+      "          }",
+      "        ],",
+      '        "provider": "google",',
+      '        "providerModel": "mock-route",',
+      '        "rawResponse": {',
+      '          "ok": true',
+      "        }",
+      "      }",
+      "    }",
+      "  ],",
+      '  "succeeded": 2,',
+      '  "total": 2',
+      "}",
+    ]);
+  });
 });
 
 describe("runCli", () => {
@@ -197,6 +287,28 @@ describe("runCli", () => {
     await expect(runCli(["generate", "--model", "imagen-4-fast"])).resolves.toBe(1);
     await expect(runCli(["generate", "--prompt", "A studio product shot"])).resolves.toBe(1);
     await expect(runCli(["generate", "--model", "imagen-4-fast", "--output-dir"])).resolves.toBe(1);
+    await expect(
+      runCli([
+        "generate",
+        "--model",
+        "imagen-4-fast",
+        "--prompt",
+        "A studio product shot",
+        "--bulk-prompts",
+        "./prompts.txt",
+      ]),
+    ).resolves.toBe(1);
+    await expect(
+      runCli([
+        "generate",
+        "--model",
+        "imagen-4-fast",
+        "--prompt",
+        "A studio product shot",
+        "--concurrency",
+        "2",
+      ]),
+    ).resolves.toBe(1);
   });
 
   it("returns a non-zero exit code for an unknown route model", async () => {
@@ -210,6 +322,11 @@ describe("runCli", () => {
   });
 
   it("returns zero for supported commands", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "image-gen-cli-run-cli-exit-"));
+    const promptsFile = join(directory, "prompts.txt");
+
+    await writeFile(promptsFile, "First prompt\nSecond prompt\n");
+
     await expect(runCli(["providers", "list"])).resolves.toBe(0);
     await expect(runCli(["models", "list"])).resolves.toBe(0);
     await expect(runCli(["routes", "list", "--model", "flux-2-pro"])).resolves.toBe(0);
@@ -217,6 +334,22 @@ describe("runCli", () => {
       runCli(["generate", "--model", "imagen-4-fast", "--prompt", "A studio product shot"], {
         createProvider: createGenerateProviderMock,
       }),
+    ).resolves.toBe(0);
+    await expect(
+      runCli(
+        [
+          "generate",
+          "--model",
+          "imagen-4-fast",
+          "--bulk-prompts",
+          promptsFile,
+          "--concurrency",
+          "2",
+        ],
+        {
+          createProvider: createGenerateProviderMock,
+        },
+      ),
     ).resolves.toBe(0);
   });
 

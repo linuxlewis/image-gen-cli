@@ -43,14 +43,16 @@ cli -> run-cli -> commands -> registry/providers/io/config/http/core
 - Discovery commands are fully registry-backed and make no network calls.
 - `generate` is the only mutating command. It resolves a canonical model id to one provider route,
   constructs the provider adapter, executes the request, then renders text or JSON output and
-  optionally saves assets.
+  optionally saves assets. Bulk prompt execution layers on top of that same lifecycle rather than
+  introducing a separate provider path.
 - Route ambiguity is resolved at the CLI layer by requiring `--provider` when a canonical model maps
   to multiple provider routes.
 
 ## Practical Ownership Map
 
 - `src/run-cli.ts`: help text, arg normalization, flag parsing, exit code behavior
-- `src/commands/generate.ts`: route selection and provider execution orchestration
+- `src/commands/generate.ts`: route selection, provider execution preparation, and single-request rendering
+- `src/commands/generate-bulk.ts`: prompt-file loading, bounded parallel fan-out, and batch result rendering
 - `src/io/generate-output.ts`: output rendering and `--output-dir` persistence
 - `src/registry/models.ts`: canonical ids, aliases, vendor metadata, family membership
 - `src/registry/routes.ts`: provider route definitions and route-level confidence/status notes
