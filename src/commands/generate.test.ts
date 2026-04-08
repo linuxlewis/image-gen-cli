@@ -169,6 +169,37 @@ describe("runGenerateCommand", () => {
     );
   });
 
+  it("passes supported generate request flags through to the provider", async () => {
+    const provider = createProviderMock();
+
+    await expect(
+      runGenerateCommand(
+        {
+          background: "transparent",
+          imageCount: 2,
+          model: "imagen-4-fast",
+          outputFormat: "jpeg",
+          prompt: "A product photo of a glass bottle",
+          quality: "high",
+          size: "1536x1024",
+        },
+        { createProvider: () => provider },
+      ),
+    ).resolves.toMatchObject({
+      ok: true,
+    });
+
+    expect(provider.generateImage).toHaveBeenCalledWith({
+      background: "transparent",
+      canonicalModelId: "imagen-4-fast",
+      imageCount: 2,
+      outputFormat: "jpeg",
+      prompt: "A product photo of a glass bottle",
+      quality: "high",
+      size: "1536x1024",
+    });
+  });
+
   it("returns provider configuration failures as user-visible errors", async () => {
     await expect(
       runGenerateCommand(

@@ -194,4 +194,38 @@ describe("generate output helpers", () => {
       Buffer.from([1, 2, 3]),
     );
   });
+
+  it("uses a caller-provided file stem prefix when saving outputs", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "image-gen-cli-prefix-"));
+    const result = createResult();
+
+    const outputs = await saveGenerateOutputs(result, {
+      fetchFn: async () =>
+        new Response(Uint8Array.from([1, 2, 3]), {
+          headers: {
+            "content-type": "image/jpeg",
+          },
+          status: 200,
+        }),
+      fileStemPrefix: "bulk-item-03",
+      outputDir: directory,
+    });
+
+    expect(outputs).toEqual([
+      {
+        filePath: join(directory, "bulk-item-03-1.png"),
+        inlineData: {
+          encoding: "base64",
+          length: result.assets[0]?.base64Data?.length ?? 0,
+        },
+        mimeType: "image/png",
+      },
+      {
+        filePath: join(directory, "bulk-item-03-2.jpeg"),
+        filename: "provider-name.jpeg",
+        mimeType: "image/jpeg",
+        url: "https://example.com/asset-2.jpeg",
+      },
+    ]);
+  });
 });

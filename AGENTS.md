@@ -7,7 +7,7 @@ This is the map. Not the manual.
 This repository is a TypeScript CLI project using `pnpm`. It is intentionally small, but it follows
 agent-first repo conventions so the codebase can scale without losing structure.
 The current MVP exposes registry-backed discovery commands plus a route-backed `generate` command
-with text, JSON, and file-save output modes.
+with single-prompt and bulk-prompt execution plus text, JSON, and file-save output modes.
 
 ## Quick Navigation
 
@@ -35,7 +35,7 @@ Public commands:
 - `providers list`
 - `models list [--family <family>] [--provider <provider>]`
 - `routes list --model <model> [--provider <provider>]`
-- `generate --model <model> --prompt <prompt> [--provider <provider>] [--json] [--output-dir <dir>]`
+- `generate --model <model> (--prompt <prompt> | --bulk-prompts <file>) [--provider <provider>] [--json] [--output-dir <dir>]`
 
 Supported providers:
 
@@ -56,6 +56,7 @@ Source-of-truth files for current behavior:
 
 - `src/run-cli.ts`: command parsing, help output, and exit-code behavior
 - `src/commands/*.ts`: command-specific rendering and generate orchestration
+- `src/commands/generate-bulk.ts`: prompt-file loading, bounded bulk parallelism, and per-item batch result shaping
 - `src/registry/models.ts`: canonical ids, aliases, and model metadata
 - `src/registry/routes.ts`: provider-route definitions and route-level notes
 - `src/registry/providers.ts`: provider ids, types, and display names
@@ -74,6 +75,8 @@ Working module map:
 - `src/cli.ts` is the only process entrypoint and owns `process.argv` plus process exit behavior
 - `src/run-cli.ts` parses command arguments, validates flags, and delegates to command modules
 - `src/commands/` contains user-visible command behavior and rendering
+- `src/commands/generate.ts` owns single-request route selection and provider execution preparation
+- `src/commands/generate-bulk.ts` owns prompt-file loading, concurrency limiting, and bulk result rendering
 - `src/registry/` owns canonical model ids, aliases, provider definitions, and route lookup
 - `src/providers/` owns provider-specific request/response translation
 - `src/config/` owns lazy environment-variable loading and validation
@@ -97,6 +100,7 @@ before changing generation plumbing or provider adapters.
 Common change locations:
 
 - Add or change a public command: update `src/run-cli.ts`, add or edit `src/commands/*`, then update `README.md` and this file.
+- Add or change bulk prompt execution: update `src/commands/generate-bulk.ts`, `src/run-cli.ts`, then update `README.md`, tests, and this file.
 - Add or change a provider: update `src/registry/providers.ts`, `src/config/env.ts`, provider adapter files, registry routes, and tests.
 - Add or change a model or alias: update `src/registry/models.ts`, then verify route coverage in `src/registry/routes.ts` and docs.
 - Change output behavior: update `src/io/generate-output.ts` and command tests.

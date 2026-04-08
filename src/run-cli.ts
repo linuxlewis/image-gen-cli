@@ -1,4 +1,16 @@
-import { type GenerateCommandDependencies, runGenerateCommand } from "./commands/generate.js";
+import {
+  type BulkGenerateCommandDependencies,
+  runBulkGenerateCommand,
+} from "./commands/generate-bulk.js";
+import {
+  GENERATE_OPTION_BACKGROUNDS,
+  GENERATE_OPTION_FORMATS,
+  GENERATE_OPTION_QUALITIES,
+  GENERATE_OPTION_SIZES,
+  type GenerateCommandDependencies,
+  type SharedGenerateCommandOptions,
+  runGenerateCommand,
+} from "./commands/generate.js";
 import { renderModelsList } from "./commands/models-list.js";
 import { renderProvidersList } from "./commands/providers-list.js";
 import { renderRoutesList } from "./commands/routes-list.js";
@@ -10,7 +22,7 @@ type CliResult = {
   lines: string[];
 };
 
-export type CliDependencies = GenerateCommandDependencies;
+export type CliDependencies = GenerateCommandDependencies & BulkGenerateCommandDependencies;
 
 function normalizeArgs(args: readonly string[]): string[] {
   if (args[0] !== "--") {
@@ -32,16 +44,30 @@ function renderHelp(): string[] {
     "  image-gen-cli providers list",
     "  image-gen-cli models list [--family <family>] [--provider <provider>]",
     "  image-gen-cli routes list --model <model> [--provider <provider>]",
-    "  image-gen-cli generate --model <model> --prompt <prompt> [--provider <provider>] [--json] [--output-dir <dir>]",
+    "  image-gen-cli generate --model <model> (--prompt <prompt> | --bulk-prompts <file>) [--provider <provider>] [--json] [--output-dir <dir>]",
     "",
     "Options:",
-    "  -h, --help             Show this help message",
-    `  --family <family>      Filter models by family (${MODEL_FAMILIES.join(", ")})`,
-    "  --json                 Render deterministic JSON for generate output",
-    `  --provider <provider>  Filter by provider (${PROVIDER_IDS.join(", ")})`,
-    "  --model <model>        Select a canonical model id or alias for route lookup",
-    "  --output-dir <dir>     Save generated assets under the target directory",
-    "  --prompt <prompt>      Text prompt for image generation",
+    "  -h, --help                  Show this help message",
+    "  --aspect-ratio <ratio>      Provider-specific aspect ratio value",
+    `  --background <background>   Background mode for supported providers (${GENERATE_OPTION_BACKGROUNDS.join(", ")})`,
+    "  --bulk-prompts <file>       Newline-delimited prompts file for bulk generate mode",
+    "  --concurrency <n>           Maximum in-flight bulk generate requests",
+    "  --duration-seconds <n>      Video duration for supported models",
+    `  --family <family>           Filter models by family (${MODEL_FAMILIES.join(", ")})`,
+    `  --format <format>           Output format for supported providers (${GENERATE_OPTION_FORMATS.join(", ")})`,
+    "  --image-count <n>           Number of images to request when supported",
+    "  --input-image <value>       Input image URL or path for supported providers",
+    "  --json                      Render deterministic JSON for generate output",
+    "  --model <model>             Select a canonical model id or alias for route lookup",
+    "  --negative-prompt <text>    Negative prompt for supported providers",
+    "  --output-compression <n>    Output compression/quality setting for supported providers",
+    "  --output-dir <dir>          Save generated assets under the target directory",
+    `  --provider <provider>       Filter by provider (${PROVIDER_IDS.join(", ")})`,
+    "  --prompt <prompt>           Text prompt for single generate mode",
+    `  --quality <quality>         Requested quality for supported providers (${GENERATE_OPTION_QUALITIES.join(", ")})`,
+    "  --seed <n>                  Random seed for supported providers",
+    `  --size <size>               Output size for supported providers (${GENERATE_OPTION_SIZES.join(", ")})`,
+    "  --user <value>              User identifier for supported providers",
   ];
 }
 
@@ -126,14 +152,187 @@ function parseRoutesList(args: readonly string[]): CliResult {
   };
 }
 
+function parseIntegerFlag(
+  args: readonly string[],
+  flag: string,
+  options: {
+    minimum?: number;
+  } = {},
+): { ok: true; value?: number } | { message: string; ok: false } {
+  if (!args.includes(flag)) {
+    return {
+      ok: true,
+    };
+  }
+
+  const value = readFlagValue(args, flag);
+
+  if (!value) {
+    return {
+      message: `Missing required value for flag: ${flag}`,
+      ok: false,
+    };
+  }
+
+  const parsed = Number.parseInt(value, 10);
+
+  if (!Number.isInteger(parsed)) {
+    return {
+      message: `Invalid integer value for flag ${flag}: ${value}`,
+      ok: false,
+    };
+  }
+
+  if (options.minimum !== undefined && parsed < options.minimum) {
+    return {
+      message: `Flag ${flag} must be greater than or equal to ${options.minimum}.`,
+      ok: false,
+    };
+  }
+
+  return {
+    ok: true,
+    value: parsed,
+  };
+}
+
+function parseStringFlag<T extends string>(
+  args: readonly string[],
+  flag: string,
+  values: readonly T[],
+  label: string,
+): { ok: true; value?: T } | { message: string; ok: false } {
+  if (!args.includes(flag)) {
+    return {
+      ok: true,
+    };
+  }
+
+  const rawValue = readFlagValue(args, flag);
+
+  if (!rawValue) {
+    return {
+      message: `Missing required value for flag: ${flag}`,
+      ok: false,
+    };
+  }
+
+  const value = findAllowedValue(values, rawValue);
+
+  if (!value) {
+    return {
+      message: `Unknown ${label}: ${rawValue}. Available ${label}s: ${values.join(", ")}`,
+      ok: false,
+    };
+  }
+
+  return {
+    ok: true,
+    value,
+  };
+}
+
+function parseGenerateRequestOptions(
+  args: readonly string[],
+):
+  | { ok: true; value: Omit<SharedGenerateCommandOptions, "prompt"> }
+  | { message: string; ok: false } {
+  const outputFormat = parseStringFlag(args, "--format", GENERATE_OPTION_FORMATS, "format");
+
+  if (!outputFormat.ok) {
+    return outputFormat;
+  }
+
+  const quality = parseStringFlag(args, "--quality", GENERATE_OPTION_QUALITIES, "quality");
+
+  if (!quality.ok) {
+    return quality;
+  }
+
+  const size = parseStringFlag(args, "--size", GENERATE_OPTION_SIZES, "size");
+
+  if (!size.ok) {
+    return size;
+  }
+
+  const background = parseStringFlag(
+    args,
+    "--background",
+    GENERATE_OPTION_BACKGROUNDS,
+    "background",
+  );
+
+  if (!background.ok) {
+    return background;
+  }
+
+  const imageCount = parseIntegerFlag(args, "--image-count", { minimum: 1 });
+
+  if (!imageCount.ok) {
+    return imageCount;
+  }
+
+  const outputCompression = parseIntegerFlag(args, "--output-compression", { minimum: 0 });
+
+  if (!outputCompression.ok) {
+    return outputCompression;
+  }
+
+  const seed = parseIntegerFlag(args, "--seed");
+
+  if (!seed.ok) {
+    return seed;
+  }
+
+  const durationSeconds = parseIntegerFlag(args, "--duration-seconds", { minimum: 1 });
+
+  if (!durationSeconds.ok) {
+    return durationSeconds;
+  }
+
+  const outputDir = readFlagValue(args, "--output-dir");
+  const aspectRatio = readFlagValue(args, "--aspect-ratio");
+  const inputImage = readFlagValue(args, "--input-image");
+  const negativePrompt = readFlagValue(args, "--negative-prompt");
+  const user = readFlagValue(args, "--user");
+
+  if (args.includes("--output-dir") && !outputDir) {
+    return {
+      message: "Missing required value for flag: --output-dir",
+      ok: false,
+    };
+  }
+
+  return {
+    ok: true,
+    value: {
+      ...(aspectRatio ? { aspectRatio } : {}),
+      ...(background.value ? { background: background.value } : {}),
+      ...(durationSeconds.value !== undefined ? { durationSeconds: durationSeconds.value } : {}),
+      ...(imageCount.value !== undefined ? { imageCount: imageCount.value } : {}),
+      ...(inputImage ? { inputImage } : {}),
+      ...(negativePrompt ? { negativePrompt } : {}),
+      ...(outputCompression.value !== undefined
+        ? { outputCompression: outputCompression.value }
+        : {}),
+      ...(outputDir ? { outputDir } : {}),
+      ...(outputFormat.value ? { outputFormat: outputFormat.value } : {}),
+      ...(quality.value ? { quality: quality.value } : {}),
+      ...(seed.value !== undefined ? { seed: seed.value } : {}),
+      ...(size.value ? { size: size.value } : {}),
+      ...(user ? { user } : {}),
+    },
+  };
+}
+
 async function parseGenerate(
   args: readonly string[],
   dependencies: CliDependencies,
 ): Promise<CliResult> {
   const asJson = args.includes("--json");
   const model = readFlagValue(args, "--model");
-  const outputDir = readFlagValue(args, "--output-dir");
   const prompt = readFlagValue(args, "--prompt");
+  const bulkPrompts = readFlagValue(args, "--bulk-prompts");
   const providerValue = readFlagValue(args, "--provider");
   const provider = findAllowedValue(PROVIDER_IDS, providerValue);
   const errorResult = (messages: readonly string[]): CliResult => ({
@@ -145,25 +344,60 @@ async function parseGenerate(
     return errorResult(["Missing required flag: --model"]);
   }
 
-  if (!prompt) {
-    return errorResult(["Missing required flag: --prompt"]);
+  if (!prompt && !bulkPrompts) {
+    return errorResult(["Missing required flag: --prompt or --bulk-prompts"]);
+  }
+
+  if (prompt && bulkPrompts) {
+    return errorResult(["Pass either --prompt or --bulk-prompts, not both."]);
   }
 
   if (providerValue && !provider) {
     return errorResult(invalidProviderResult(providerValue).lines);
   }
 
-  if (args.includes("--output-dir") && !outputDir) {
-    return errorResult(["Missing required value for flag: --output-dir"]);
+  const parsedRequestOptions = parseGenerateRequestOptions(args);
+
+  if (!parsedRequestOptions.ok) {
+    return errorResult([parsedRequestOptions.message]);
+  }
+
+  if (bulkPrompts) {
+    const concurrency = parseIntegerFlag(args, "--concurrency", { minimum: 1 });
+
+    if (!concurrency.ok) {
+      return errorResult([concurrency.message]);
+    }
+
+    const result = await runBulkGenerateCommand(
+      {
+        ...(asJson ? { json: true } : {}),
+        ...(concurrency.value !== undefined ? { concurrency: concurrency.value } : {}),
+        bulkPrompts,
+        model,
+        ...(provider ? { provider } : {}),
+        ...parsedRequestOptions.value,
+      },
+      dependencies,
+    );
+
+    return {
+      exitCode: result.ok ? 0 : 1,
+      lines: result.lines,
+    };
+  }
+
+  if (args.includes("--concurrency")) {
+    return errorResult(["Flag --concurrency requires --bulk-prompts."]);
   }
 
   const result = await runGenerateCommand(
     {
       ...(asJson ? { json: true } : {}),
       model,
-      ...(outputDir ? { outputDir } : {}),
-      prompt,
       ...(provider ? { provider } : {}),
+      ...parsedRequestOptions.value,
+      prompt: prompt ?? "",
     },
     dependencies,
   );

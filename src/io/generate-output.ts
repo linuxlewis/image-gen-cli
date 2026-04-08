@@ -31,6 +31,7 @@ export type GenerateJsonOutput = {
 
 export type SaveGenerateOutputsOptions = {
   fetchFn?: typeof fetch;
+  fileStemPrefix?: string;
   outputDir?: string;
 };
 
@@ -141,7 +142,14 @@ export async function saveGenerateOutputs(
   const savedOutputs: GenerateOutputReference[] = [];
 
   for (const [index, asset] of result.assets.entries()) {
-    const savedAsset = await saveAsset(result, asset, index, outputDir, fetchFn);
+    const savedAsset = await saveAsset(
+      result,
+      asset,
+      index,
+      outputDir,
+      fetchFn,
+      options.fileStemPrefix,
+    );
     savedOutputs.push(buildOutputReference(asset, savedAsset));
   }
 
@@ -196,10 +204,11 @@ async function saveAsset(
   index: number,
   outputDir: string,
   fetchFn: typeof fetch,
+  fileStemPrefix?: string,
 ): Promise<SavedAsset> {
   const filePath = resolve(
     outputDir,
-    `${sanitizePathSegment(result.canonicalModelId)}-${index + 1}${resolveOutputExtension(
+    `${sanitizePathSegment(fileStemPrefix ?? result.canonicalModelId)}-${index + 1}${resolveOutputExtension(
       asset,
       result.outputFormat,
     )}`,
@@ -289,7 +298,7 @@ function normalizeMimeType(mimeType: string | null | undefined): string | undefi
   return mimeType.split(";", 1)[0]?.trim().toLowerCase();
 }
 
-function renderStableJsonLines(value: unknown): string[] {
+export function renderStableJsonLines(value: unknown): string[] {
   return JSON.stringify(sortJsonValue(value), null, 2).split("\n");
 }
 

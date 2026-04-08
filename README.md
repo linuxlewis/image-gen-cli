@@ -19,7 +19,8 @@ pnpm build
 The current MVP has two capabilities:
 
 - Read-only registry discovery for providers, canonical models, and provider routes
-- Image generation through one selected provider route with text or JSON output and optional file save
+- Image generation through one selected provider route with single-prompt and bulk-prompt modes, text
+  or JSON output, and optional file save
 
 The CLI is model-first: users select a canonical model id or alias, and the registry resolves that
 to a provider route.
@@ -87,7 +88,7 @@ working tree.
 image-gen-cli providers list
 image-gen-cli models list [--family <family>] [--provider <provider>]
 image-gen-cli routes list --model <model> [--provider <provider>]
-image-gen-cli generate --model <model> --prompt <prompt> [--provider <provider>] [--json] [--output-dir <dir>]
+image-gen-cli generate --model <model> (--prompt <prompt> | --bulk-prompts <file>) [--provider <provider>] [--json] [--output-dir <dir>]
 ```
 
 ### `providers list`
@@ -144,26 +145,39 @@ Shows provider routes for one canonical model id or alias. Use `--model <model>`
 ## Generate Command
 
 `generate` resolves a canonical model id to one provider route, runs the selected provider adapter,
-and prints normalized output metadata for the generated assets. It can also render deterministic JSON
-or save generated assets to disk.
+and prints normalized output metadata for the generated assets. It supports both single-prompt and
+bulk prompt-file execution, can render deterministic JSON, and can save generated assets to disk.
 
 ```bash
 pnpm dev -- generate --model imagen-4-fast --prompt "A studio product shot"
 pnpm dev -- generate --model gpt-image-1 --prompt "A studio product shot"
 pnpm dev -- generate --model flux-schnell --provider together --prompt "A studio product shot"
 pnpm dev -- generate --model flux-2-pro --provider together --prompt "A studio product shot"
+pnpm dev -- generate --model gpt-image-1 --prompt "A studio product shot" --format png --quality high --size 1536x1024
 pnpm dev -- generate --model imagen-4-fast --prompt "A studio product shot" --json
 pnpm dev -- generate --model imagen-4-fast --prompt "A studio product shot" --output-dir ./generated
+pnpm dev -- generate --model imagen-4-fast --bulk-prompts ./prompts.txt --concurrency 4 --output-dir ./generated
+pnpm dev -- generate --model imagen-4-fast --bulk-prompts ./prompts.txt --concurrency 4 --json
 ```
 
 Rules:
 
 - `--model <model>` is required and accepts canonical ids or aliases
-- `--prompt <prompt>` is required
+- exactly one of `--prompt <prompt>` or `--bulk-prompts <file>` is required
 - `--provider <provider>` is optional when the model resolves to exactly one route
 - `--provider <provider>` is required when the model resolves to multiple routes
+- `--bulk-prompts <file>` reads one prompt per non-empty line and runs the shared generate lifecycle
+  for each prompt
+- `--concurrency <n>` bounds bulk in-flight requests; it is only valid with `--bulk-prompts <file>`
 - `--json` renders stable structured output with canonical model, provider, provider model, raw response, and output references
 - `--output-dir <dir>` saves generated assets to deterministic file paths under the target directory and includes those paths in the output
+- `--format`, `--quality`, `--size`, `--image-count`, `--background`, `--aspect-ratio`,
+  `--output-compression`, `--seed`, `--input-image`, `--negative-prompt`, `--duration-seconds`,
+  and `--user` pass through to the provider request when that route supports them
+- bulk `--output-dir` saves each prompt result under a unique deterministic stem so prompts do not
+  overwrite each other
+- bulk JSON output stays machine-usable by returning per-prompt success and failure entries plus a
+  batch summary
 - Ambiguous models such as `flux-2-pro`, `flux-2-dev`, `flux-2-flex`, `flux-1-schnell`, and `flux-1-kontext-pro` require explicit provider selection because they currently route through both `together` and `replicate`
 
 Example text output:
@@ -185,6 +199,37 @@ Example JSON output shape:
   "provider": "google",
   "providerModel": "imagen-4.0-fast-generate-001",
   "rawResponse": {}
+}
+```
+
+Example bulk JSON output shape:
+
+```json
+{
+  "concurrency": 4,
+  "failed": 1,
+  "results": [
+    {
+      "index": 1,
+      "ok": true,
+      "prompt": "A studio product shot",
+      "result": {
+        "canonicalModel": "imagen-4-fast",
+        "outputs": [],
+        "provider": "google",
+        "providerModel": "imagen-4.0-fast-generate-001",
+        "rawResponse": {}
+      }
+    },
+    {
+      "errors": ["rate limit"],
+      "index": 2,
+      "ok": false,
+      "prompt": "A rainy street scene"
+    }
+  ],
+  "succeeded": 1,
+  "total": 2
 }
 ```
 
