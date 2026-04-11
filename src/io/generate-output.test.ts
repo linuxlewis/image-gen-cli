@@ -157,7 +157,7 @@ describe("generate output helpers", () => {
     ]);
   });
 
-  it("saves inline and URL-backed assets to deterministic file paths", async () => {
+  it("saves inline and URL-backed assets to deterministic file paths when an output directory is provided", async () => {
     const directory = await mkdtemp(join(tmpdir(), "image-gen-cli-"));
     const result = createResult();
 
@@ -193,5 +193,51 @@ describe("generate output helpers", () => {
     await expect(readFile(join(directory, "gpt-image-1-2.jpeg"))).resolves.toEqual(
       Buffer.from([1, 2, 3]),
     );
+  });
+
+  it("saves assets into the working directory by default", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "image-gen-cli-default-"));
+    const previousCwd = process.cwd();
+    const result = createResult();
+
+    process.chdir(directory);
+
+    try {
+      const outputs = await saveGenerateOutputs(result, {
+        fetchFn: async () =>
+          new Response(Uint8Array.from([1, 2, 3]), {
+            headers: {
+              "content-type": "image/jpeg; charset=utf-8",
+            },
+            status: 200,
+          }),
+      });
+
+      expect(outputs).toEqual([
+        {
+          filePath: join(directory, "gpt-image-1-1.png"),
+          inlineData: {
+            encoding: "base64",
+            length: result.assets[0]?.base64Data?.length ?? 0,
+          },
+          mimeType: "image/png",
+        },
+        {
+          filePath: join(directory, "gpt-image-1-2.jpeg"),
+          filename: "provider-name.jpeg",
+          mimeType: "image/jpeg",
+          url: "https://example.com/asset-2.jpeg",
+        },
+      ]);
+
+      await expect(readFile(join(directory, "gpt-image-1-1.png"), "utf8")).resolves.toBe(
+        "image-one",
+      );
+      await expect(readFile(join(directory, "gpt-image-1-2.jpeg"))).resolves.toEqual(
+        Buffer.from([1, 2, 3]),
+      );
+    } finally {
+      process.chdir(previousCwd);
+    }
   });
 });

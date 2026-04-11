@@ -40,7 +40,7 @@ function renderHelp(): string[] {
     "  --json                 Render deterministic JSON for generate output",
     `  --provider <provider>  Filter by provider (${PROVIDER_IDS.join(", ")})`,
     "  --model <model>        Select a canonical model id or alias for route lookup",
-    "  --output-dir <dir>     Save generated assets under the target directory",
+    "  --output-dir <dir>     Save generated assets under the target directory (defaults to the current working directory)",
     "  --prompt <prompt>      Text prompt for image generation",
   ];
 }

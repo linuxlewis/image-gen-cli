@@ -128,12 +128,7 @@ export async function saveGenerateOutputs(
   result: NormalizedProviderResult,
   options: SaveGenerateOutputsOptions = {},
 ): Promise<GenerateOutputReference[]> {
-  const outputDir = options.outputDir;
-
-  if (!outputDir) {
-    return result.assets.map((asset) => buildOutputReference(asset));
-  }
-
+  const outputDir = options.outputDir ?? ".";
   const fetchFn = options.fetchFn ?? globalThis.fetch;
 
   await mkdir(outputDir, { recursive: true });

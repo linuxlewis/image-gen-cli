@@ -1,3 +1,6 @@
+import { mkdtemp } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ImageGenerationProvider, NormalizedProviderResult } from "./providers/base.js";
@@ -7,7 +10,13 @@ function createGenerateProviderMock(): ImageGenerationProvider {
   return {
     generateImage: vi.fn(
       async (request): Promise<NormalizedProviderResult<{ ok: true }>> => ({
-        assets: [{ filename: `${request.canonicalModelId}.png`, mimeType: "image/png" }],
+        assets: [
+          {
+            base64Data: Buffer.from("mock-image").toString("base64"),
+            filename: `${request.canonicalModelId}.png`,
+            mimeType: "image/png",
+          },
+        ],
         canonicalModelId: request.canonicalModelId,
         model: request.canonicalModelId,
         provider: "google",
@@ -39,7 +48,7 @@ describe("renderCliOutput", () => {
       "  --json                 Render deterministic JSON for generate output",
       "  --provider <provider>  Filter by provider (openai, google, together, replicate)",
       "  --model <model>        Select a canonical model id or alias for route lookup",
-      "  --output-dir <dir>     Save generated assets under the target directory",
+      "  --output-dir <dir>     Save generated assets under the target directory (defaults to the current working directory)",
       "  --prompt <prompt>      Text prompt for image generation",
     ]);
   });
@@ -115,46 +124,67 @@ describe("renderCliOutput", () => {
   });
 
   it("renders generate output through the command wiring", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "image-gen-cli-render-"));
+    const previousCwd = process.cwd();
     const createProvider = vi.fn(createGenerateProviderMock);
 
-    await expect(
-      renderCliOutput(
-        ["generate", "--model", "imagen-4-fast", "--prompt", "A studio product shot"],
-        { createProvider },
-      ),
-    ).resolves.toEqual([
-      "Provider: google",
-      "Canonical model: imagen-4-fast",
-      "Provider model: mock-route",
-      "Outputs: 1",
-      "Output 1: imagen-4-fast.png | mime=image/png",
-    ]);
+    process.chdir(directory);
+
+    try {
+      await expect(
+        renderCliOutput(
+          ["generate", "--model", "imagen-4-fast", "--prompt", "A studio product shot"],
+          { createProvider },
+        ),
+      ).resolves.toEqual([
+        "Provider: google",
+        "Canonical model: imagen-4-fast",
+        "Provider model: mock-route",
+        "Outputs: 1",
+        `Output 1: ${join(directory, "imagen-4-fast-1.png")} | mime=image/png | inline-data=16 chars | saved=${join(directory, "imagen-4-fast-1.png")}`,
+      ]);
+    } finally {
+      process.chdir(previousCwd);
+    }
   });
 
   it("renders generate JSON output through the command wiring", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "image-gen-cli-render-json-"));
+    const previousCwd = process.cwd();
     const createProvider = vi.fn(createGenerateProviderMock);
 
-    await expect(
-      renderCliOutput(
-        ["generate", "--model", "imagen-4-fast", "--prompt", "A studio product shot", "--json"],
-        { createProvider },
-      ),
-    ).resolves.toEqual([
-      "{",
-      '  "canonicalModel": "imagen-4-fast",',
-      '  "outputs": [',
-      "    {",
-      '      "filename": "imagen-4-fast.png",',
-      '      "mimeType": "image/png"',
-      "    }",
-      "  ],",
-      '  "provider": "google",',
-      '  "providerModel": "mock-route",',
-      '  "rawResponse": {',
-      '    "ok": true',
-      "  }",
-      "}",
-    ]);
+    process.chdir(directory);
+
+    try {
+      await expect(
+        renderCliOutput(
+          ["generate", "--model", "imagen-4-fast", "--prompt", "A studio product shot", "--json"],
+          { createProvider },
+        ),
+      ).resolves.toEqual([
+        "{",
+        '  "canonicalModel": "imagen-4-fast",',
+        '  "outputs": [',
+        "    {",
+        '      "filename": "imagen-4-fast.png",',
+        `      "filePath": "${join(directory, "imagen-4-fast-1.png")}",`,
+        '      "inlineData": {',
+        '        "encoding": "base64",',
+        '        "length": 16',
+        "      },",
+        '      "mimeType": "image/png"',
+        "    }",
+        "  ],",
+        '  "provider": "google",',
+        '  "providerModel": "mock-route",',
+        '  "rawResponse": {',
+        '    "ok": true',
+        "  }",
+        "}",
+      ]);
+    } finally {
+      process.chdir(previousCwd);
+    }
   });
 });
 

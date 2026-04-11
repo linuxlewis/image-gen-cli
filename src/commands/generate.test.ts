@@ -76,28 +76,40 @@ describe("selectGenerateRoute", () => {
 });
 
 describe("runGenerateCommand", () => {
-  it("runs the selected provider and renders user-visible output", async () => {
+  it("runs the selected provider, saves into the working directory by default, and renders user-visible output", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "image-gen-command-default-"));
+    const previousCwd = process.cwd();
     const provider = createProviderMock();
     const createProvider = vi.fn(() => provider);
 
-    await expect(
-      runGenerateCommand(
-        {
-          model: "imagen-4-fast",
-          prompt: "A product photo of a glass bottle",
-        },
-        { createProvider },
-      ),
-    ).resolves.toEqual({
-      lines: [
-        "Provider: google",
-        "Canonical model: imagen-4-fast",
-        "Provider model: mock-route",
-        "Outputs: 1",
-        "Output 1: imagen-4-fast.png | mime=image/png | inline-data=16 chars",
-      ],
-      ok: true,
-    });
+    process.chdir(directory);
+
+    try {
+      await expect(
+        runGenerateCommand(
+          {
+            model: "imagen-4-fast",
+            prompt: "A product photo of a glass bottle",
+          },
+          { createProvider },
+        ),
+      ).resolves.toEqual({
+        lines: [
+          "Provider: google",
+          "Canonical model: imagen-4-fast",
+          "Provider model: mock-route",
+          "Outputs: 1",
+          `Output 1: ${join(directory, "imagen-4-fast-1.png")} | mime=image/png | inline-data=16 chars | saved=${join(directory, "imagen-4-fast-1.png")}`,
+        ],
+        ok: true,
+      });
+
+      await expect(readFile(join(directory, "imagen-4-fast-1.png"), "utf8")).resolves.toBe(
+        "mock-image",
+      );
+    } finally {
+      process.chdir(previousCwd);
+    }
 
     expect(createProvider).toHaveBeenCalledWith("google", {});
     expect(provider.generateImage).toHaveBeenCalledWith({
@@ -107,38 +119,48 @@ describe("runGenerateCommand", () => {
   });
 
   it("renders deterministic JSON output when requested", async () => {
-    await expect(
-      runGenerateCommand(
-        {
-          json: true,
-          model: "imagen-4-fast",
-          prompt: "A product photo of a glass bottle",
-        },
-        { createProvider: () => createProviderMock() },
-      ),
-    ).resolves.toEqual({
-      lines: [
-        "{",
-        '  "canonicalModel": "imagen-4-fast",',
-        '  "outputs": [',
-        "    {",
-        '      "filename": "imagen-4-fast.png",',
-        '      "inlineData": {',
-        '        "encoding": "base64",',
-        '        "length": 16',
-        "      },",
-        '      "mimeType": "image/png"',
-        "    }",
-        "  ],",
-        '  "provider": "google",',
-        '  "providerModel": "mock-route",',
-        '  "rawResponse": {',
-        '    "ok": true',
-        "  }",
-        "}",
-      ],
-      ok: true,
-    });
+    const directory = await mkdtemp(join(tmpdir(), "image-gen-command-json-"));
+    const previousCwd = process.cwd();
+
+    process.chdir(directory);
+
+    try {
+      await expect(
+        runGenerateCommand(
+          {
+            json: true,
+            model: "imagen-4-fast",
+            prompt: "A product photo of a glass bottle",
+          },
+          { createProvider: () => createProviderMock() },
+        ),
+      ).resolves.toEqual({
+        lines: [
+          "{",
+          '  "canonicalModel": "imagen-4-fast",',
+          '  "outputs": [',
+          "    {",
+          '      "filename": "imagen-4-fast.png",',
+          `      "filePath": "${join(directory, "imagen-4-fast-1.png")}",`,
+          '      "inlineData": {',
+          '        "encoding": "base64",',
+          '        "length": 16',
+          "      },",
+          '      "mimeType": "image/png"',
+          "    }",
+          "  ],",
+          '  "provider": "google",',
+          '  "providerModel": "mock-route",',
+          '  "rawResponse": {',
+          '    "ok": true',
+          "  }",
+          "}",
+        ],
+        ok: true,
+      });
+    } finally {
+      process.chdir(previousCwd);
+    }
   });
 
   it("saves generated files when an output directory is provided", async () => {

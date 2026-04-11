@@ -19,7 +19,7 @@ pnpm build
 The current MVP has two capabilities:
 
 - Read-only registry discovery for providers, canonical models, and provider routes
-- Image generation through one selected provider route with text or JSON output and optional file save
+- Image generation through one selected provider route with text or JSON output and saved files by default
 
 The CLI is model-first: users select a canonical model id or alias, and the registry resolves that
 to a provider route.
@@ -144,8 +144,8 @@ Shows provider routes for one canonical model id or alias. Use `--model <model>`
 ## Generate Command
 
 `generate` resolves a canonical model id to one provider route, runs the selected provider adapter,
-and prints normalized output metadata for the generated assets. It can also render deterministic JSON
-or save generated assets to disk.
+prints normalized output metadata for the generated assets, and saves generated assets to disk in the
+current working directory by default. Use `--output-dir` to override that location.
 
 ```bash
 pnpm dev -- generate --model imagen-4-fast --prompt "A studio product shot"
@@ -163,7 +163,8 @@ Rules:
 - `--provider <provider>` is optional when the model resolves to exactly one route
 - `--provider <provider>` is required when the model resolves to multiple routes
 - `--json` renders stable structured output with canonical model, provider, provider model, raw response, and output references
-- `--output-dir <dir>` saves generated assets to deterministic file paths under the target directory and includes those paths in the output
+- Generated assets save to deterministic file paths in the current working directory by default and those paths are included in the output
+- `--output-dir <dir>` overrides the default save location and writes generated assets under the target directory
 - Ambiguous models such as `flux-2-pro`, `flux-2-dev`, `flux-2-flex`, `flux-1-schnell`, and `flux-1-kontext-pro` require explicit provider selection because they currently route through both `together` and `replicate`
 
 Example text output:
